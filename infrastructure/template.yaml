@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  GUATEPASS - Sistema de Cobro Automatizado de Peajes
+  Slice #1: Carga inicial de datos desde CSV
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.11
+    Tracing: Active
+    Environment:
+      Variables:
+        POWERTOOLS_SERVICE_NAME: guatepass
+        LOG_LEVEL: INFO
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Ambiente de despliegue
+
+Resources:
+  # ========================================
+  # S3 BUCKET - Almacenamiento de datos iniciales
+  # ========================================
+  GuatepassDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub guatepass-data-${Environment}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
+  # DYNAMODB TABLE - Usuarios
+  # ========================================
+  GuatepassUsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub GuatepassUsers-${Environment}
+      BillingMode: PAY_PER_REQUEST  # Serverless, escala automáticamente
+      AttributeDefinitions:
+        - AttributeName: placa
+          AttributeType: S
+        - AttributeName: tag_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: placa
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: TagIndex
+          KeySchema:
+            - AttributeName: tag_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Importar Usuarios desde CSV
+  # ========================================
+  ImportUsersFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-import-users-${Environment}
+      CodeUri: ../src/import_users/
+      Handler: app.lambda_handler
+      Description: Importa usuarios desde archivo CSV en S3 a DynamoDB
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+          ENVIRONMENT: !Ref Environment
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref GuatepassDataBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # CLOUDWATCH LOG GROUPS
+  # ========================================
+  ImportUsersLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ImportUsersFunction}
+      RetentionInDays: 7
+
+  # ========================================
+  # CLOUDWATCH DASHBOARD - Monitoreo Slice #1
+  # ========================================
+  GuatepassDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub GUATEPASS-Slice1-${Environment}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum", "label": "Invocaciones"}],
+                  [".", "Errors", {"stat": "Sum", "label": "Errores"}],
+                  [".", "Duration", {"stat": "Average", "label": "Duración Promedio"}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "Lambda ImportUsers - Métricas",
+                "dimensions": {
+                  "FunctionName": ["${ImportUsersFunction}"]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", {"stat": "Sum"}],
+                  [".", "ConsumedWriteCapacityUnits", {"stat": "Sum"}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "DynamoDB GuatepassUsers - Capacidad",
+                "dimensions": {
+                  "TableName": ["${GuatepassUsersTable}"]
+                }
+              }
+            },
+            {
+              "type": "log",
+              "properties": {
+                "query": "SOURCE '${ImportUsersLogGroup}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 20",
+                "region": "${AWS::Region}",
+                "title": "Errores Recientes",
+                "stacked": false
+              }
+            }
+          ]
+        }
+
+  # ========================================
+  # CLOUDWATCH ALARMS
+  # ========================================
+  ImportUsersErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub guatepass-import-users-errors-${Environment}
+      AlarmDescription: Alerta cuando la función ImportUsers tiene errores
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ImportUsersFunction
+      TreatMissingData: notBreaching
+
+Outputs:
+  DataBucketName:
+    Description: Nombre del bucket S3 para datos iniciales
+    Value: !Ref GuatepassDataBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-DataBucket
+
+  UsersTableName:
+    Description: Nombre de la tabla DynamoDB de usuarios
+    Value: !Ref GuatepassUsersTable
+    Export:
+      Name: !Sub ${AWS::StackName}-UsersTable
+
+  ImportUsersFunctionArn:
+    Description: ARN de la función Lambda ImportUsers
+    Value: !GetAtt ImportUsersFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ImportUsersFunction
+
+  DashboardURL:
+    Description: URL del Dashboard de CloudWatch
+    Value: !Sub https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=GUATEPASS-Slice1-${Environment}
+  
+  ImportUsersFunctionName:
+    Description: Nombre de la función Lambda para configurar trigger S3
+    Value: !Ref ImportUsersFunction
+    
+  SetupS3TriggerCommand:
+    Description: Comando para configurar el trigger S3 (ejecutar después del deploy)
+    Value: !Sub |
+      aws lambda add-permission --function-name ${ImportUsersFunction} --statement-id s3-trigger --action lambda:InvokeFunction --principal s3.amazonaws.com --source-arn arn:aws:s3:::${GuatepassDataBucket} --region ${AWS::Region}
+      aws s3api put-bucket-notification-configuration --bucket ${GuatepassDataBucket} --notification-configuration '{"LambdaFunctionConfigurations":[{"LambdaFunctionArn":"'$(aws lambda get-function --function-name ${ImportUsersFunction} --query Configuration.FunctionArn --output text --region ${AWS::Region})'","Events":["s3:ObjectCreated:*"],"Filter":{"Key":{"FilterRules":[{"Name":"prefix","Value":"clientes"},{"Name":"suffix","Value":".csv"}]}}}]}'

@@ -1,0 +1,6 @@
+# Dependencias para Lambda ImportUsers
+# boto3 ya viene incluido en el runtime de AWS Lambda Python 3.11
+# pero se lista aquí para referencia y desarrollo local
+
+boto3>=1.26.0
+

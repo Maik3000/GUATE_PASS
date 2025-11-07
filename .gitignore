@@ -1,0 +1,68 @@
+# AWS SAM
+.aws-sam/
+samconfig.toml.backup
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporal
+temp/
+tmp/
+*.tmp
+
+# Secrets (¡NUNCA subir credenciales!)
+.env
+.env.local
+secrets.json
+credentials.json
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+
+# Node (si se usa en algún slice futuro)
+node_modules/
+package-lock.json
+
