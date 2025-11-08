@@ -4,6 +4,7 @@ Description: >
   GUATEPASS - Sistema de Cobro Automatizado de Peajes
   Slice #1: Carga inicial de datos desde CSV
   Slice #2: API de consulta de usuarios
+  Slice #3: Webhook de peajes y EventBridge
 
 Globals:
   Function:
@@ -82,6 +83,39 @@ Resources:
         StreamViewType: NEW_AND_OLD_IMAGES
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
+  # DYNAMODB TABLE - Catálogo de Peajes (Slice #3)
+  # ========================================
+  GuatepassTollsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub GuatepassTolls-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: peaje_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: peaje_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
+  # EVENTBRIDGE BUS - Bus de eventos (Slice #3)
+  # ========================================
+  GuatepassEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub guatepass-bus-${Environment}
       Tags:
         - Key: Project
           Value: GUATEPASS
@@ -186,6 +220,68 @@ Resources:
         Environment: !Ref Environment
 
   # ========================================
+  # LAMBDA FUNCTION - Ingest Toll (Slice #3)
+  # ========================================
+  IngestTollFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassEventBus
+    Properties:
+      FunctionName: !Sub guatepass-ingest-toll-${Environment}
+      CodeUri: ../src/ingest_toll/
+      Handler: app.lambda_handler
+      Description: Recibe eventos de paso por peaje y los publica a EventBridge
+      Environment:
+        Variables:
+          EVENT_BUS_NAME: !Ref GuatepassEventBus
+          ENVIRONMENT: !Ref Environment
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref GuatepassEventBus
+      Events:
+        WebhookToll:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /webhook/toll
+            Method: POST
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Resolve User Profile (Slice #3)
+  # ========================================
+  ResolveUserProfileFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: 
+      - GuatepassUsersTable
+      - GuatepassEventBus
+    Properties:
+      FunctionName: !Sub guatepass-resolve-user-${Environment}
+      CodeUri: ../src/resolve_user/
+      Handler: app.lambda_handler
+      Description: Determina la modalidad del usuario al pasar por peaje
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Events:
+        TollDetectedEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref GuatepassEventBus
+            Pattern:
+              source:
+                - guatepass.toll
+              detail-type:
+                - TollDetected
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
   # CLOUDWATCH LOG GROUPS
   # ========================================
   ImportUsersLogGroup:
@@ -204,6 +300,18 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${GetTagByPlacaFunction}
+      RetentionInDays: 7
+
+  IngestTollLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${IngestTollFunction}
+      RetentionInDays: 7
+
+  ResolveUserProfileLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ResolveUserProfileFunction}
       RetentionInDays: 7
 
   # ========================================
@@ -336,3 +444,22 @@ Outputs:
   GetTagEndpoint:
     Description: Endpoint para consultar tag por placa
     Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users/{placa}/tag
+
+  # ========================================
+  # OUTPUTS - Slice #3 (Webhook y EventBridge)
+  # ========================================
+  WebhookTollEndpoint:
+    Description: Endpoint para recibir eventos de paso por peaje
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/webhook/toll
+
+  EventBusName:
+    Description: Nombre del EventBridge bus
+    Value: !Ref GuatepassEventBus
+    Export:
+      Name: !Sub ${AWS::StackName}-EventBus
+
+  TollsTableName:
+    Description: Nombre de la tabla DynamoDB de peajes
+    Value: !Ref GuatepassTollsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-TollsTable

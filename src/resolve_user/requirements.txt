@@ -1,0 +1,5 @@
+# Dependencias para Lambda ResolveUserProfile
+# boto3 ya viene incluido en el runtime de AWS Lambda Python 3.11
+
+boto3>=1.26.0
+
