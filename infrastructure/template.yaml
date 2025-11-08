@@ -5,6 +5,7 @@ Description: >
   Slice #1: Carga inicial de datos desde CSV
   Slice #2: API de consulta de usuarios
   Slice #3: Webhook de peajes y EventBridge
+  Slice #4: Step Functions - Orquestación de transacciones
 
 Globals:
   Function:
@@ -103,6 +104,43 @@ Resources:
       KeySchema:
         - AttributeName: peaje_id
           KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
+  # DYNAMODB TABLE - Transacciones (Slice #4)
+  # ========================================
+  GuatepassTransactionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub GuatepassTransactions-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: transaction_id
+          AttributeType: S
+        - AttributeName: placa
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: transaction_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: PlacaTimestampIndex
+          KeySchema:
+            - AttributeName: placa
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       Tags:
         - Key: Project
           Value: GUATEPASS
@@ -249,7 +287,7 @@ Resources:
         Environment: !Ref Environment
 
   # ========================================
-  # LAMBDA FUNCTION - Resolve User Profile (Slice #3)
+  # LAMBDA FUNCTION - Resolve User Profile (Slice #3/4)
   # ========================================
   ResolveUserProfileFunction:
     Type: AWS::Serverless::Function
@@ -260,13 +298,19 @@ Resources:
       FunctionName: !Sub guatepass-resolve-user-${Environment}
       CodeUri: ../src/resolve_user/
       Handler: app.lambda_handler
-      Description: Determina la modalidad del usuario al pasar por peaje
+      Description: Determina la modalidad del usuario al pasar por peaje e inicia Step Function
       Environment:
         Variables:
           USERS_TABLE_NAME: !Ref GuatepassUsersTable
+          STATE_MACHINE_ARN: !Ref GuatepassProcessTollStateMachine
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref GuatepassUsersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource: !Ref GuatepassProcessTollStateMachine
       Events:
         TollDetectedEvent:
           Type: EventBridgeRule
@@ -277,6 +321,65 @@ Resources:
                 - guatepass.toll
               detail-type:
                 - TollDetected
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Calculate Toll Fare (Slice #4)
+  # ========================================
+  CalculateTollFareFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub guatepass-calculate-fare-${Environment}
+      CodeUri: ../src/calculate_toll_fare/
+      Handler: app.lambda_handler
+      Description: Calcula la tarifa del peaje según modalidad
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Record Transaction (Slice #4)
+  # ========================================
+  RecordTransactionFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassTransactionsTable
+    Properties:
+      FunctionName: !Sub guatepass-record-transaction-${Environment}
+      CodeUri: ../src/record_transaction/
+      Handler: app.lambda_handler
+      Description: Registra la transacción en DynamoDB
+      Environment:
+        Variables:
+          TRANSACTIONS_TABLE_NAME: !Ref GuatepassTransactionsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassTransactionsTable
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Update Balance (Slice #4)
+  # ========================================
+  UpdateBalanceFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-update-balance-${Environment}
+      CodeUri: ../src/update_balance/
+      Handler: app.lambda_handler
+      Description: Actualiza el balance del usuario después de la transacción
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassUsersTable
       Tags:
         Project: GUATEPASS
         Environment: !Ref Environment
@@ -312,6 +415,63 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${ResolveUserProfileFunction}
+      RetentionInDays: 7
+
+  CalculateTollFareLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CalculateTollFareFunction}
+      RetentionInDays: 7
+
+  RecordTransactionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RecordTransactionFunction}
+      RetentionInDays: 7
+
+  UpdateBalanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${UpdateBalanceFunction}
+      RetentionInDays: 7
+
+  # ========================================
+  # STEP FUNCTIONS STATE MACHINE (Slice #4)
+  # ========================================
+  GuatepassProcessTollStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub guatepass-process-toll-${Environment}
+      Type: STANDARD
+      DefinitionUri: ../src/stepfunctions/process_toll.asl.json
+      DefinitionSubstitutions:
+        CalculateTollFareFunctionArn: !GetAtt CalculateTollFareFunction.Arn
+        RecordTransactionFunctionArn: !GetAtt RecordTransactionFunction.Arn
+        UpdateBalanceFunctionArn: !GetAtt UpdateBalanceFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CalculateTollFareFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RecordTransactionFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref UpdateBalanceFunction
+        - CloudWatchLogsFullAccess
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ProcessTollStateMachineLogGroup.Arn
+      Tracing:
+        Enabled: true
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  ProcessTollStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/stepfunctions/guatepass-process-toll-${Environment}
       RetentionInDays: 7
 
   # ========================================
@@ -463,3 +623,22 @@ Outputs:
     Value: !Ref GuatepassTollsTable
     Export:
       Name: !Sub ${AWS::StackName}-TollsTable
+
+  # ========================================
+  # OUTPUTS - Slice #4 (Step Functions)
+  # ========================================
+  TransactionsTableName:
+    Description: Nombre de la tabla DynamoDB de transacciones
+    Value: !Ref GuatepassTransactionsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-TransactionsTable
+
+  StateMachineArn:
+    Description: ARN de la Step Function para procesar transacciones
+    Value: !Ref GuatepassProcessTollStateMachine
+    Export:
+      Name: !Sub ${AWS::StackName}-StateMachine
+
+  StateMachineUrl:
+    Description: URL de la consola de la Step Function
+    Value: !Sub https://console.aws.amazon.com/states/home?region=${AWS::Region}#/statemachines/view/${GuatepassProcessTollStateMachine}

@@ -13,9 +13,11 @@ from typing import Dict, Any, Optional
 
 # Clientes AWS
 dynamodb = boto3.resource('dynamodb')
+stepfunctions = boto3.client('stepfunctions')
 
 # Variables de entorno
 USERS_TABLE_NAME = os.environ['USERS_TABLE_NAME']
+STATE_MACHINE_ARN = os.environ.get('STATE_MACHINE_ARN')
 users_table = dynamodb.Table(USERS_TABLE_NAME)
 
 
@@ -24,9 +26,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Handler que procesa eventos de EventBridge y determina la modalidad del usuario.
     
     Modalidades:
-    - Modalidad 1: Usuario NO registrado (cobro tradicional + multa)
-    - Modalidad 2: Usuario registrado en app (cobro digital)
-    - Modalidad 3: Usuario con Tag (cobro express)
+    - Modalidad 1: Usuario registrado CON Tag (descuento)
+    - Modalidad 2: Usuario registrado SIN Tag (normal)
+    - Modalidad 3: Usuario NO registrado (premium + multa)
     
     Args:
         event: Evento de EventBridge con información del peaje
@@ -44,6 +46,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         placa = detail.get('placa')
         tag_id = detail.get('tag_id')
         peaje_id = detail.get('peaje_id')
+        peaje_nombre = detail.get('peaje_nombre', 'Desconocido')
         event_id = detail.get('event_id')
         
         if not placa:
@@ -52,31 +55,67 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         print(f"[INFO] Resolviendo perfil para placa: {placa}, tag_id: {tag_id}")
         
         # Buscar usuario en DynamoDB
-        user_profile = find_user(placa, tag_id)
+        user_data = find_user(placa, tag_id)
         
         # Determinar modalidad
-        modalidad_info = determine_modality(user_profile, tag_id)
+        modalidad_info = determine_modality(user_data, tag_id)
         
-        # Construir resultado
-        result = {
-            'event_id': event_id,
+        # Construir perfil completo del usuario
+        user_profile = {
             'placa': placa,
-            'peaje_id': peaje_id,
-            'tag_id': tag_id,
-            'user_profile': user_profile,
             'modalidad': modalidad_info['modalidad'],
+            'is_registered': user_data is not None,
+            'has_tag': modalidad_info['modalidad'] == 3,
+            'tag_id': user_data.get('tag_id') if user_data else None,
+            'nombre': user_data.get('nombre') if user_data else None,
+            'email': user_data.get('email') if user_data else None,
             'tipo_cobro': modalidad_info['tipo_cobro'],
-            'recargo_aplica': modalidad_info['recargo_aplica'],
+            'descripcion': modalidad_info['descripcion']
+        }
+        
+        # Construir información del peaje
+        peaje_info = {
+            'peaje_id': peaje_id,
+            'nombre_peaje': peaje_nombre,
+            'lane_id': detail.get('lane_id', 'LANE-01'),
+            'tag_id': tag_id,
             'timestamp': detail.get('timestamp')
         }
         
+        # Payload para Step Function (formato esperado por los Lambdas siguientes)
+        step_function_input = {
+            'event_id': event_id,
+            'user_data': user_profile,
+            'toll_data': peaje_info,
+            'original_event': detail
+        }
+        
         print(f"[SUCCESS] Modalidad determinada: {modalidad_info['modalidad']} para placa {placa}")
-        print(f"[INFO] Resultado: {json.dumps(result)}")
+        print(f"[INFO] Iniciando Step Function con input: {json.dumps(step_function_input)}")
         
-        # TODO: En Slice #4, aquí se invocará Step Functions
-        # Por ahora solo loggeamos
-        
-        return result
+        # Iniciar ejecución de Step Function
+        if STATE_MACHINE_ARN:
+            execution_name = f"toll-{event_id}-{placa}".replace(':', '-').replace('.', '-')[:80]
+            
+            sf_response = stepfunctions.start_execution(
+                stateMachineArn=STATE_MACHINE_ARN,
+                name=execution_name,
+                input=json.dumps(step_function_input)
+            )
+            
+            execution_arn = sf_response['executionArn']
+            print(f"[SUCCESS] Step Function iniciada: {execution_arn}")
+            
+            return {
+                'statusCode': 200,
+                'execution_arn': execution_arn,
+                'event_id': event_id,
+                'placa': placa,
+                'modalidad': modalidad_info['modalidad']
+            }
+        else:
+            print("[WARNING] STATE_MACHINE_ARN no configurado, solo se resolvió el perfil")
+            return step_function_input
         
     except Exception as e:
         print(f"[ERROR] Error resolviendo perfil de usuario: {str(e)}")
@@ -138,6 +177,11 @@ def determine_modality(user_profile: Optional[Dict[str, Any]], tag_id: Optional[
     """
     Determina la modalidad de cobro según el perfil del usuario.
     
+    Modalidades:
+    - Modalidad 1: Usuario NO registrado (tarifa más alta, +50%)
+    - Modalidad 2: Usuario registrado SIN Tag (tarifa intermedia, +20%)
+    - Modalidad 3: Usuario registrado CON Tag (tarifa más baja, tarifa base)
+    
     Args:
         user_profile: Información del usuario (puede ser None)
         tag_id: ID del Tag detectado
@@ -149,13 +193,13 @@ def determine_modality(user_profile: Optional[Dict[str, Any]], tag_id: Optional[
     if not user_profile:
         return {
             'modalidad': 1,
-            'tipo_cobro': 'tradicional',
+            'tipo_cobro': 'sin_cuenta',
             'recargo_aplica': True,
-            'descripcion': 'Usuario no registrado - Cobro premium + multa',
-            'debe_invitar': True  # Debe enviar invitación si tiene email/teléfono
+            'descripcion': 'Usuario no registrado - Tarifa más alta (+50%)',
+            'debe_invitar': True
         }
     
-    # Modalidad 3: Usuario con Tag
+    # Modalidad 3: Usuario registrado CON Tag
     if user_profile.get('tiene_tag') and tag_id:
         # Verificar que el tag_id coincida con el del usuario
         if user_profile.get('tag_id') == tag_id:
@@ -163,29 +207,19 @@ def determine_modality(user_profile: Optional[Dict[str, Any]], tag_id: Optional[
                 'modalidad': 3,
                 'tipo_cobro': 'express',
                 'recargo_aplica': False,
-                'descripcion': 'Usuario con Tag - Cobro automático express',
+                'descripcion': 'Usuario registrado con Tag - Tarifa base (sin recargo)',
                 'debe_invitar': False
             }
         else:
             print(f"[WARNING] Tag ID no coincide: usuario={user_profile.get('tag_id')}, detectado={tag_id}")
     
-    # Modalidad 2: Usuario registrado (sin Tag o Tag no detectado)
-    if user_profile.get('tipo_usuario') == 'registrado':
-        return {
-            'modalidad': 2,
-            'tipo_cobro': 'digital',
-            'recargo_aplica': False,
-            'descripcion': 'Usuario registrado - Cobro automático digital',
-            'debe_invitar': False
-        }
-    
-    # Por defecto, tratar como no registrado
+    # Modalidad 2: Usuario registrado SIN Tag (o Tag no detectado)
     return {
-        'modalidad': 1,
-        'tipo_cobro': 'tradicional',
+        'modalidad': 2,
+        'tipo_cobro': 'digital',
         'recargo_aplica': True,
-        'descripcion': 'Usuario no registrado - Cobro premium + multa',
-        'debe_invitar': True
+        'descripcion': 'Usuario registrado sin Tag - Tarifa intermedia (+20%)',
+        'debe_invitar': False
     }
 
 

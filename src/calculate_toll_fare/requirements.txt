@@ -1,0 +1,2 @@
+# No se requieren dependencias externas para este Lambda
+

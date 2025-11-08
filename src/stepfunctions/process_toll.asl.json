@@ -1,0 +1,200 @@
+{
+  "Comment": "Orquestación del procesamiento de transacciones de peaje",
+  "StartAt": "CalculateTollFare",
+  "States": {
+    "CalculateTollFare": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CalculateTollFareFunctionArn}",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "payload.$": "$.Payload"
+      },
+      "ResultPath": "$.calculate_result",
+      "Next": "MergeCalculateResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleCalculateError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MergeCalculateResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "user_data.$": "$.user_data",
+        "toll_data.$": "$.toll_data",
+        "fare_calculation.$": "$.calculate_result.payload.fare_calculation"
+      },
+      "Next": "RecordTransaction"
+    },
+    "RecordTransaction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${RecordTransactionFunctionArn}",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "payload.$": "$.Payload"
+      },
+      "ResultPath": "$.record_result",
+      "Next": "MergeRecordResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleRecordError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MergeRecordResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "user_data.$": "$.user_data",
+        "toll_data.$": "$.toll_data",
+        "fare_calculation.$": "$.fare_calculation",
+        "transaction.$": "$.record_result.payload.transaction"
+      },
+      "Next": "UpdateBalance"
+    },
+    "UpdateBalance": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${UpdateBalanceFunctionArn}",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "payload.$": "$.Payload"
+      },
+      "ResultPath": "$.balance_result",
+      "Next": "MergeBalanceResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleBalanceError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MergeBalanceResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "user_data.$": "$.user_data",
+        "toll_data.$": "$.toll_data",
+        "fare_calculation.$": "$.fare_calculation",
+        "transaction.$": "$.transaction",
+        "balance_update.$": "$.balance_result.payload.balance_update"
+      },
+      "Next": "CheckBalanceStatus"
+    },
+    "CheckBalanceStatus": {
+      "Type": "Choice",
+      "Comment": "Verifica si el balance se actualizó correctamente o si hay saldo insuficiente",
+      "Choices": [
+        {
+          "Variable": "$.balance_update.message",
+          "StringEquals": "Saldo insuficiente",
+          "Next": "InsufficientBalance"
+        },
+        {
+          "Variable": "$.balance_update.message",
+          "StringEquals": "Usuario no registrado - Pago en efectivo",
+          "Next": "CashPaymentRequired"
+        }
+      ],
+      "Default": "ProcessingSuccess"
+    },
+    "InsufficientBalance": {
+      "Type": "Succeed",
+      "Comment": "Transacción registrada pero saldo insuficiente - Requiere recarga",
+      "OutputPath": "$"
+    },
+    "CashPaymentRequired": {
+      "Type": "Succeed",
+      "Comment": "Usuario no registrado - Pago en efectivo requerido",
+      "OutputPath": "$"
+    },
+    "ProcessingSuccess": {
+      "Type": "Succeed",
+      "Comment": "Transacción procesada y pagada exitosamente"
+    },
+    "HandleCalculateError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "error",
+        "stage": "calculate_fare",
+        "error.$": "$.error",
+        "input.$": "$"
+      },
+      "Next": "ProcessingFailed"
+    },
+    "HandleRecordError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "error",
+        "stage": "record_transaction",
+        "error.$": "$.error",
+        "input.$": "$"
+      },
+      "Next": "ProcessingFailed"
+    },
+    "HandleBalanceError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "error",
+        "stage": "update_balance",
+        "error.$": "$.error",
+        "input.$": "$"
+      },
+      "Next": "ProcessingFailed"
+    },
+    "ProcessingFailed": {
+      "Type": "Fail",
+      "Comment": "Error procesando la transacción"
+    }
+  }
+}
