@@ -19,22 +19,38 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 ## 🎯 Estado del Proyecto
 
 ### ✅ Slice #1: Carga Inicial de Datos (COMPLETADO)
-
-Componentes implementados:
 - ✅ Bucket S3 para almacenamiento de datos iniciales
 - ✅ Tabla DynamoDB `GuatepassUsers`
 - ✅ Lambda `ImportUsersFunction` con trigger S3
-- ✅ Dashboard de CloudWatch
-- ✅ Alarmas de monitoreo
-- ✅ Infrastructure as Code (SAM)
+- ✅ Dashboard de CloudWatch y Alarmas
+
+### ✅ Slice #2: API de Consulta (COMPLETADO)
+- ✅ API Gateway REST
+- ✅ GET /users/{placa} - Consultar usuario
+- ✅ GET /users/{placa}/tag - Consultar tag
+
+### ✅ Slice #3: Webhook de Peajes (COMPLETADO)
+- ✅ POST /webhook/toll - Recibir eventos de peaje
+- ✅ EventBridge Bus para eventos
+- ✅ Lambda ResolveUserProfile
+
+### ✅ Slice #4: Step Functions (COMPLETADO)
+- ✅ Máquina de estados para procesar transacciones
+- ✅ Lambda CalculateTollFare
+- ✅ Lambda RecordTransaction
+- ✅ Lambda UpdateBalance
+- ✅ Tabla GuatepassTransactions
+
+### ✅ Slice #5: Gestión de Tags (COMPLETADO)
+- ✅ POST /users/{placa}/tag - Crear/asociar tag
+- ✅ PUT /users/{placa}/tag - Actualizar tag
+- ✅ DELETE /users/{placa}/tag - Eliminar tag
+- ✅ GET /tags/{tag_id} - Consultar por Tag ID
+- ✅ Validación de unicidad de tags
 
 ### 🔜 Próximos Slices
 
-- ⏳ Slice #2: API de Consulta de Usuarios
-- ⏳ Slice #3: Webhook de Peajes y EventBridge
-- ⏳ Slice #4: Procesamiento de Transacciones con Step Functions
-- ⏳ Slice #5: Gestión de Tags
-- ⏳ Slice #6: Notificaciones
+- ⏳ Slice #6: Notificaciones (SNS, Emails, SMS)
 
 ---
 

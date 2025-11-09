@@ -258,6 +258,122 @@ Resources:
         Environment: !Ref Environment
 
   # ========================================
+  # SLICE #5 - GESTIÓN DE TAGS
+  # ========================================
+  
+  # ========================================
+  # LAMBDA FUNCTION - Create Tag (Slice #5)
+  # ========================================
+  CreateTagFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-create-tag-${Environment}
+      CodeUri: ../src/create_tag/
+      Handler: app.lambda_handler
+      Description: Asocia un Tag a un usuario registrado
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Events:
+        CreateTag:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /users/{placa}/tag
+            Method: POST
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Update Tag (Slice #5)
+  # ========================================
+  UpdateTagFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-update-tag-${Environment}
+      CodeUri: ../src/update_tag/
+      Handler: app.lambda_handler
+      Description: Actualiza la información del Tag de un usuario
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Events:
+        UpdateTag:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /users/{placa}/tag
+            Method: PUT
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Delete Tag (Slice #5)
+  # ========================================
+  DeleteTagFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-delete-tag-${Environment}
+      CodeUri: ../src/delete_tag/
+      Handler: app.lambda_handler
+      Description: Desasocia un Tag de un usuario
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Events:
+        DeleteTag:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /users/{placa}/tag
+            Method: DELETE
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Get Tag by Tag ID (Slice #5)
+  # ========================================
+  GetTagFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassUsersTable
+    Properties:
+      FunctionName: !Sub guatepass-get-tag-by-id-${Environment}
+      CodeUri: ../src/get_tag/
+      Handler: app.lambda_handler
+      Description: Consulta información de un usuario por su Tag ID
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref GuatepassUsersTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GuatepassUsersTable
+      Events:
+        GetTagById:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /tags/{tag_id}
+            Method: GET
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
   # LAMBDA FUNCTION - Ingest Toll (Slice #3)
   # ========================================
   IngestTollFunction:
@@ -433,6 +549,30 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${UpdateBalanceFunction}
+      RetentionInDays: 7
+
+  CreateTagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CreateTagFunction}
+      RetentionInDays: 7
+
+  UpdateTagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${UpdateTagFunction}
+      RetentionInDays: 7
+
+  DeleteTagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DeleteTagFunction}
+      RetentionInDays: 7
+
+  GetTagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetTagFunction}
       RetentionInDays: 7
 
   # ========================================
@@ -642,3 +782,22 @@ Outputs:
   StateMachineUrl:
     Description: URL de la consola de la Step Function
     Value: !Sub https://console.aws.amazon.com/states/home?region=${AWS::Region}#/statemachines/view/${GuatepassProcessTollStateMachine}
+
+  # ========================================
+  # OUTPUTS - Slice #5 (Gestión de Tags)
+  # ========================================
+  CreateTagEndpoint:
+    Description: Endpoint para crear/asociar un tag a un usuario
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users/{placa}/tag [POST]
+
+  UpdateTagEndpoint:
+    Description: Endpoint para actualizar el tag de un usuario
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users/{placa}/tag [PUT]
+
+  DeleteTagEndpoint:
+    Description: Endpoint para desasociar un tag de un usuario
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users/{placa}/tag [DELETE]
+
+  GetTagByIdEndpoint:
+    Description: Endpoint para consultar usuario por Tag ID
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/tags/{tag_id} [GET]
