@@ -148,6 +148,41 @@ Resources:
           Value: !Ref Environment
 
   # ========================================
+  # DYNAMODB TABLE - Facturas (Slice #6)
+  # ========================================
+  GuatepassInvoicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub GuatepassInvoices-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: invoice_id
+          AttributeType: S
+        - AttributeName: placa
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: invoice_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: PlacaCreatedIndex
+          KeySchema:
+            - AttributeName: placa
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: GUATEPASS
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ========================================
   # EVENTBRIDGE BUS - Bus de eventos (Slice #3)
   # ========================================
   GuatepassEventBus:
@@ -501,6 +536,48 @@ Resources:
         Environment: !Ref Environment
 
   # ========================================
+  # SLICE #6 - NOTIFICACIONES Y FACTURACIÓN
+  # ========================================
+  
+  # ========================================
+  # LAMBDA FUNCTION - Generate Invoice (Slice #6)
+  # ========================================
+  GenerateInvoiceFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassInvoicesTable
+    Properties:
+      FunctionName: !Sub guatepass-generate-invoice-${Environment}
+      CodeUri: ../src/generate_invoice/
+      Handler: app.lambda_handler
+      Description: Genera facturas simuladas según modalidad del usuario
+      Environment:
+        Variables:
+          INVOICES_TABLE_NAME: !Ref GuatepassInvoicesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GuatepassInvoicesTable
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
+  # LAMBDA FUNCTION - Notify User (Slice #6)
+  # ========================================
+  NotifyUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub guatepass-notify-user-${Environment}
+      CodeUri: ../src/notify_user/
+      Handler: app.lambda_handler
+      Description: Envía notificaciones por email según modalidad (simulado con logs)
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
   # CLOUDWATCH LOG GROUPS
   # ========================================
   ImportUsersLogGroup:
@@ -575,6 +652,18 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${GetTagFunction}
       RetentionInDays: 7
 
+  GenerateInvoiceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GenerateInvoiceFunction}
+      RetentionInDays: 7
+
+  NotifyUserLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${NotifyUserFunction}
+      RetentionInDays: 7
+
   # ========================================
   # STEP FUNCTIONS STATE MACHINE (Slice #4)
   # ========================================
@@ -588,6 +677,8 @@ Resources:
         CalculateTollFareFunctionArn: !GetAtt CalculateTollFareFunction.Arn
         RecordTransactionFunctionArn: !GetAtt RecordTransactionFunction.Arn
         UpdateBalanceFunctionArn: !GetAtt UpdateBalanceFunction.Arn
+        GenerateInvoiceFunctionArn: !GetAtt GenerateInvoiceFunction.Arn
+        NotifyUserFunctionArn: !GetAtt NotifyUserFunction.Arn
       Policies:
         - LambdaInvokePolicy:
             FunctionName: !Ref CalculateTollFareFunction
@@ -595,6 +686,10 @@ Resources:
             FunctionName: !Ref RecordTransactionFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref UpdateBalanceFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GenerateInvoiceFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref NotifyUserFunction
         - CloudWatchLogsFullAccess
       Logging:
         Level: ALL
@@ -801,3 +896,24 @@ Outputs:
   GetTagByIdEndpoint:
     Description: Endpoint para consultar usuario por Tag ID
     Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/tags/{tag_id} [GET]
+
+  # ========================================
+  # OUTPUTS - Slice #6 (Notificaciones y Facturación)
+  # ========================================
+  InvoicesTableName:
+    Description: Nombre de la tabla DynamoDB de facturas
+    Value: !Ref GuatepassInvoicesTable
+    Export:
+      Name: !Sub ${AWS::StackName}-InvoicesTable
+
+  GenerateInvoiceFunctionArn:
+    Description: ARN de la función Lambda para generar facturas
+    Value: !GetAtt GenerateInvoiceFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-GenerateInvoiceFunction
+
+  NotifyUserFunctionArn:
+    Description: ARN de la función Lambda para notificaciones
+    Value: !GetAtt NotifyUserFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-NotifyUserFunction

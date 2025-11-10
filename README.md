@@ -48,9 +48,16 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 - ✅ GET /tags/{tag_id} - Consultar por Tag ID
 - ✅ Validación de unicidad de tags
 
-### 🔜 Próximos Slices
+### ✅ Slice #6: Notificaciones y Facturación (COMPLETADO)
+- ✅ Tabla GuatepassInvoices
+- ✅ Generación de facturas simuladas
+- ✅ Facturas con multa para no registrados (Modalidad 1)
+- ✅ Notificación de cobro para registrados (Modalidad 2)
+- ✅ Invitación para registrarse (Modalidad 1)
+- ✅ Templates de email personalizados
+- ✅ Emails simulados con logs
 
-- ⏳ Slice #6: Notificaciones (SNS, Emails, SMS)
+### 🎉 **¡PROYECTO 100% COMPLETADO!**
 
 ---
 

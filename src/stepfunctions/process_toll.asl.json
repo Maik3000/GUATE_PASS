@@ -138,6 +138,117 @@
         {
           "Variable": "$.balance_update.message",
           "StringEquals": "Saldo insuficiente",
+          "Next": "GenerateInvoice"
+        },
+        {
+          "Variable": "$.balance_update.message",
+          "StringEquals": "Usuario no registrado - Pago en efectivo",
+          "Next": "GenerateInvoice"
+        }
+      ],
+      "Default": "GenerateInvoice"
+    },
+    "GenerateInvoice": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "Genera factura simulada según modalidad",
+      "Parameters": {
+        "FunctionName": "${GenerateInvoiceFunctionArn}",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "payload.$": "$.Payload"
+      },
+      "ResultPath": "$.invoice_result",
+      "Next": "MergeInvoiceResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleInvoiceError",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MergeInvoiceResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "user_data.$": "$.user_data",
+        "toll_data.$": "$.toll_data",
+        "fare_calculation.$": "$.fare_calculation",
+        "transaction.$": "$.transaction",
+        "balance_update.$": "$.balance_update",
+        "invoice.$": "$.invoice_result.payload.invoice"
+      },
+      "Next": "NotifyUser"
+    },
+    "NotifyUser": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "Envía notificaciones por email según modalidad",
+      "Parameters": {
+        "FunctionName": "${NotifyUserFunctionArn}",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "statusCode.$": "$.StatusCode",
+        "payload.$": "$.Payload"
+      },
+      "ResultPath": "$.notify_result",
+      "Next": "MergeNotifyResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ProcessingSuccess",
+          "ResultPath": "$.error",
+          "Comment": "No fallar si falla notificación"
+        }
+      ]
+    },
+    "MergeNotifyResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "user_data.$": "$.user_data",
+        "toll_data.$": "$.toll_data",
+        "fare_calculation.$": "$.fare_calculation",
+        "transaction.$": "$.transaction",
+        "balance_update.$": "$.balance_update",
+        "invoice.$": "$.invoice",
+        "notification.$": "$.notify_result.payload.notification"
+      },
+      "Next": "CheckFinalStatus"
+    },
+    "CheckFinalStatus": {
+      "Type": "Choice",
+      "Comment": "Determina el estado final de la transacción",
+      "Choices": [
+        {
+          "Variable": "$.balance_update.message",
+          "StringEquals": "Saldo insuficiente",
           "Next": "InsufficientBalance"
         },
         {
@@ -161,6 +272,16 @@
     "ProcessingSuccess": {
       "Type": "Succeed",
       "Comment": "Transacción procesada y pagada exitosamente"
+    },
+    "HandleInvoiceError": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "error",
+        "stage": "generate_invoice",
+        "error.$": "$.error",
+        "input.$": "$"
+      },
+      "Next": "ProcessingFailed"
     },
     "HandleCalculateError": {
       "Type": "Pass",
