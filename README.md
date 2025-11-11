@@ -1,98 +1,169 @@
 # 🚗 GUATEPASS - Sistema de Cobro Automatizado de Peajes
 
-Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemala, construido 100% con servicios administrados de AWS.
+Sistema serverless **100% completado** para el cobro automatizado de peajes en la Ciudad de Guatemala, construido completamente con servicios administrados de AWS.
+
+[![AWS](https://img.shields.io/badge/AWS-Serverless-orange)](https://aws.amazon.com/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
+[![SAM](https://img.shields.io/badge/SAM-Template-green)](https://aws.amazon.com/serverless/sam/)
 
 ---
 
 ## 📋 Tabla de Contenidos
 
-- [Estado del Proyecto](#estado-del-proyecto)
-- [Arquitectura](#arquitectura)
-- [Prerrequisitos](#prerrequisitos)
-- [Instalación y Despliegue](#instalación-y-despliegue)
-- [Uso del Sistema](#uso-del-sistema)
-- [Monitoreo](#monitoreo)
-- [Troubleshooting](#troubleshooting)
+- [Descripción General](#-descripción-general)
+- [Estado del Proyecto](#-estado-del-proyecto)
+- [Arquitectura](#-arquitectura)
+- [Prerrequisitos](#-prerrequisitos)
+- [Instalación y Despliegue](#-instalación-y-despliegue)
+- [Carga Inicial de Datos](#-carga-inicial-de-datos-csv)
+- [Uso del Sistema](#-uso-del-sistema)
+- [Ejemplos de Requests](#-ejemplos-de-requests)
+- [Monitoreo y Logs](#-monitoreo-y-logs)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+
+---
+
+## 🎯 Descripción General
+
+**GUATEPASS** es un sistema completo de cobro automatizado de peajes que permite:
+
+### Funcionalidades Principales
+
+✅ **Gestión de Usuarios**
+- Importación masiva desde CSV
+- Consulta de información de usuarios
+- Gestión de Tags RFID
+- Dos modalidades: Registrados y No Registrados
+
+✅ **Procesamiento de Transacciones**
+- Webhook para recibir eventos de peaje
+- Cálculo automático de tarifas con multiplicadores
+- Descuento automático de saldo (usuarios registrados)
+- Generación de facturas con/sin multa
+
+✅ **Sistema de Facturación**
+- Facturas simuladas (no SAT)
+- Modalidad 1 (No Registrado): Factura PENDIENTE + Multa 50%
+- Modalidad 2 (Registrado): Factura PAGADA automática
+- Historial completo de facturas por vehículo
+
+✅ **Notificaciones**
+- Emails simulados con logs
+- Invitación para registrarse (Modalidad 1)
+- Notificación de cobro (Modalidad 2)
+- Alertas de saldo bajo
+
+✅ **API REST Completa**
+- 12 endpoints para gestión completa
+- Consulta de usuarios, tags, pagos y facturas
+- CRUD completo de Tags RFID
+- Historial de transacciones
+
+✅ **Monitoreo Completo**
+- Dashboard de CloudWatch con 11 widgets
+- Logs centralizados de 17 funciones Lambda
+- Métricas de Lambda, API Gateway y DynamoDB
+- Alarmas configuradas
+
+### Tecnologías Utilizadas
+
+- **Compute:** AWS Lambda (Python 3.11)
+- **API:** API Gateway REST
+- **Storage:** DynamoDB (4 tablas), S3
+- **Orchestration:** Step Functions
+- **Events:** EventBridge
+- **Monitoring:** CloudWatch (Dashboards, Logs, Alarms)
+- **IaC:** AWS SAM (CloudFormation)
 
 ---
 
 ## 🎯 Estado del Proyecto
 
-### ✅ Slice #1: Carga Inicial de Datos (COMPLETADO)
-- ✅ Bucket S3 para almacenamiento de datos iniciales
-- ✅ Tabla DynamoDB `GuatepassUsers`
-- ✅ Lambda `ImportUsersFunction` con trigger S3
-- ✅ Dashboard de CloudWatch y Alarmas
+### ✅ **PROYECTO 100% COMPLETADO**
 
-### ✅ Slice #2: API de Consulta (COMPLETADO)
-- ✅ API Gateway REST
-- ✅ GET /users/{placa} - Consultar usuario
-- ✅ GET /users/{placa}/tag - Consultar tag
+| Componente | Estado | Descripción |
+|-----------|--------|-------------|
+| **Slice #1** | ✅ | Carga inicial de datos desde CSV |
+| **Slice #2** | ✅ | API de consulta de usuarios y tags |
+| **Slice #3** | ✅ | Webhook de peajes y EventBridge |
+| **Slice #4** | ✅ | Step Functions para procesamiento |
+| **Slice #5** | ✅ | Gestión completa de Tags RFID |
+| **Slice #6** | ✅ | Notificaciones y facturación |
+| **Historial** | ✅ | Endpoints de historial de pagos/facturas |
+| **Dashboard** | ✅ | Monitoreo completo con CloudWatch |
 
-### ✅ Slice #3: Webhook de Peajes (COMPLETADO)
-- ✅ POST /webhook/toll - Recibir eventos de peaje
-- ✅ EventBridge Bus para eventos
-- ✅ Lambda ResolveUserProfile
-
-### ✅ Slice #4: Step Functions (COMPLETADO)
-- ✅ Máquina de estados para procesar transacciones
-- ✅ Lambda CalculateTollFare
-- ✅ Lambda RecordTransaction
-- ✅ Lambda UpdateBalance
-- ✅ Tabla GuatepassTransactions
-
-### ✅ Slice #5: Gestión de Tags (COMPLETADO)
-- ✅ POST /users/{placa}/tag - Crear/asociar tag
-- ✅ PUT /users/{placa}/tag - Actualizar tag
-- ✅ DELETE /users/{placa}/tag - Eliminar tag
-- ✅ GET /tags/{tag_id} - Consultar por Tag ID
-- ✅ Validación de unicidad de tags
-
-### ✅ Slice #6: Notificaciones y Facturación (COMPLETADO)
-- ✅ Tabla GuatepassInvoices
-- ✅ Generación de facturas simuladas
-- ✅ Facturas con multa para no registrados (Modalidad 1)
-- ✅ Notificación de cobro para registrados (Modalidad 2)
-- ✅ Invitación para registrarse (Modalidad 1)
-- ✅ Templates de email personalizados
-- ✅ Emails simulados con logs
-
-### 🎉 **¡PROYECTO 100% COMPLETADO!**
+**Total de Funciones Lambda:** 17  
+**Total de Endpoints API:** 12  
+**Total de Tablas DynamoDB:** 4  
+**Total de Widgets Dashboard:** 11  
 
 ---
 
 ## 🏗️ Arquitectura
 
-### Slice #1: Carga Inicial de Datos
+### Arquitectura General del Sistema
 
 ```
-┌─────────────────┐
-│  data/          │
-│  clientes.csv   │
-└────────┬────────┘
-         │ (upload manual)
-         ▼
-┌─────────────────────────────┐
-│  S3 Bucket                  │
-│  guatepass-data-{env}       │
-└────────┬────────────────────┘
-         │ (trigger S3:ObjectCreated)
-         ▼
-┌─────────────────────────────┐
-│  Lambda                     │
-│  ImportUsersFunction        │
-│  - Parse CSV                │
-│  - Validate data            │
-│  - Batch write              │
-└────────┬────────────────────┘
-         │ (batch write)
-         ▼
-┌─────────────────────────────┐
-│  DynamoDB                   │
-│  GuatepassUsers             │
-│  PK: placa                  │
-│  GSI: tag_id                │
-└─────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      GUATEPASS SYSTEM                        │
+└─────────────────────────────────────────────────────────────┘
+
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  S3 Bucket   │────▶│   Lambda     │────▶│  DynamoDB    │
+│  CSV Upload  │     │  ImportUsers │     │   Users      │
+└──────────────┘     └──────────────┘     └──────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                     API Gateway REST                          │
+├──────────────────────────────────────────────────────────────┤
+│  GET  /users/{placa}              - Consultar usuario        │
+│  GET  /users/{placa}/tag          - Consultar tag            │
+│  POST /users/{placa}/tag          - Crear tag                │
+│  PUT  /users/{placa}/tag          - Actualizar tag           │
+│  DELETE /users/{placa}/tag        - Eliminar tag             │
+│  GET  /tags/{tag_id}              - Buscar por Tag ID        │
+│  GET  /history/payments/{placa}   - Historial pagos         │
+│  GET  /history/invoices/{placa}   - Historial facturas      │
+│  POST /webhook/toll               - Recibir evento peaje     │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                      EventBridge Bus                          │
+└──────────────┬───────────────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  Step Functions (Orquestación)                │
+├──────────────────────────────────────────────────────────────┤
+│  1. ResolveUser    → Identificar usuario y modalidad         │
+│  2. CalculateFare  → Calcular tarifa con multiplicador       │
+│  3. RecordTransaction → Guardar en historial                 │
+│  4. UpdateBalance  → Actualizar saldo (Modalidad 2)          │
+│  5. GenerateInvoice → Crear factura (con/sin multa)          │
+│  6. NotifyUser     → Enviar notificación (simulada)          │
+└──────────────┬───────────────────────────────────────────────┘
+               │
+               ▼
+┌────────────────────────────────────────────────────────────┐
+│                    DynamoDB Tables                          │
+├────────────────────────────────────────────────────────────┤
+│  • GuatepassUsers         (PK: placa, GSI: tag_id)         │
+│  • GuatepassTolls         (PK: toll_id)                    │
+│  • GuatepassTransactions  (PK: transaction_id, GSI: placa) │
+│  • GuatepassInvoices      (PK: invoice_id, GSI: placa)     │
+└────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│              CloudWatch (Monitoreo y Logs)                  │
+├────────────────────────────────────────────────────────────┤
+│  • Dashboard con 11 widgets                                 │
+│  • 17 Log Groups (7 días retención)                         │
+│  • Métricas: Lambda, API Gateway, DynamoDB                  │
+│  • Alarmas de errores configuradas                          │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -101,54 +172,86 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 
 ### Software Necesario
 
-1. **AWS CLI** (versión 2.x)
-   ```bash
-   aws --version
-   # aws-cli/2.x.x o superior
-   ```
+#### 1. AWS CLI (versión 2.x)
+```bash
+# Verificar instalación
+aws --version
+# Salida esperada: aws-cli/2.x.x o superior
+```
 
-2. **AWS SAM CLI**
-   ```bash
-   sam --version
-   # SAM CLI, version 1.100.0 o superior
-   ```
+**Instalación:**
+- Windows: https://aws.amazon.com/cli/
+- Mac: `brew install awscli`
+- Linux: `pip install awscli`
 
-3. **Python 3.11**
-   ```bash
-   python --version
-   # Python 3.11.x
-   ```
+#### 2. AWS SAM CLI
+```bash
+# Verificar instalación
+sam --version
+# Salida esperada: SAM CLI, version 1.100.0 o superior
+```
 
-4. **Git**
-   ```bash
-   git --version
-   ```
+**Instalación:**
+- https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
+
+#### 3. Python 3.11
+```bash
+# Verificar instalación
+python --version
+# Salida esperada: Python 3.11.x
+```
+
+#### 4. Git
+```bash
+git --version
+```
 
 ### Configuración de AWS
 
-1. **Credenciales configuradas**
-   ```bash
-   aws configure
-   # AWS Access Key ID: [tu-access-key]
-   # AWS Secret Access Key: [tu-secret-key]
-   # Default region name: us-east-1
-   # Default output format: json
-   ```
+#### 1. Configurar Credenciales
 
-2. **Verificar credenciales**
-   ```bash
-   aws sts get-caller-identity
-   ```
+```bash
+aws configure
+```
+
+**Información requerida:**
+```
+AWS Access Key ID: [tu-access-key]
+AWS Secret Access Key: [tu-secret-key]
+Default region name: us-east-1
+Default output format: json
+```
+
+#### 2. Verificar Credenciales
+
+```bash
+aws sts get-caller-identity
+```
+
+**Salida esperada:**
+```json
+{
+    "UserId": "AIDAXXXXXXXXXXXXXXX",
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/tu-usuario"
+}
+```
 
 ### Permisos IAM Necesarios
 
 El usuario/rol de AWS debe tener permisos para:
-- CloudFormation (crear/actualizar stacks)
-- S3 (crear buckets, subir objetos)
-- Lambda (crear funciones, configurar triggers)
-- DynamoDB (crear tablas, escribir items)
-- IAM (crear roles y políticas)
-- CloudWatch (crear dashboards, alarmas, log groups)
+
+- ✅ **CloudFormation**: Crear/actualizar stacks
+- ✅ **S3**: Crear buckets, subir objetos
+- ✅ **Lambda**: Crear funciones, configurar triggers
+- ✅ **DynamoDB**: Crear tablas, leer/escribir items
+- ✅ **API Gateway**: Crear APIs y recursos
+- ✅ **Step Functions**: Crear state machines
+- ✅ **EventBridge**: Crear buses y reglas
+- ✅ **IAM**: Crear roles y políticas
+- ✅ **CloudWatch**: Crear dashboards, alarmas, log groups
+
+**Política recomendada:** `PowerUserAccess` o permisos específicos personalizados.
 
 ---
 
@@ -157,11 +260,11 @@ El usuario/rol de AWS debe tener permisos para:
 ### Paso 1: Clonar el Repositorio
 
 ```bash
-cd /tu/directorio/de/trabajo
-# Si ya estás en el directorio GUATE_PASS, continúa al siguiente paso
+git clone https://github.com/tu-usuario/GUATE_PASS.git
+cd GUATE_PASS
 ```
 
-### Paso 2: Validar el Template de SAM
+### Paso 2: Validar el Template
 
 ```bash
 sam validate -t infrastructure/template.yaml
@@ -186,6 +289,8 @@ Built Artifacts  : .aws-sam/build
 Built Template   : .aws-sam/build/template.yaml
 ```
 
+**Tiempo aproximado:** 1-2 minutos
+
 ### Paso 4: Desplegar en AWS
 
 #### Opción A: Despliegue Guiado (Primera vez)
@@ -196,63 +301,92 @@ sam deploy --guided
 
 **Responde las preguntas:**
 ```
-Stack Name [sam-app]: guatepass-slice1
-AWS Region [us-east-1]: us-east-1
-Parameter Environment [dev]: dev
-Confirm changes before deploy [y/N]: y
-Allow SAM CLI IAM role creation [Y/n]: Y
-Disable rollback [y/N]: N
-ImportUsersFunction may not have authorization defined, Is this okay? [y/N]: y
-Save arguments to configuration file [Y/n]: Y
-SAM configuration file [samconfig.toml]: samconfig.toml
-SAM configuration environment [default]: default
+Stack Name: guatepass-dev
+AWS Region: us-east-1
+Parameter Environment: dev
+Confirm changes before deploy: y
+Allow SAM CLI IAM role creation: Y
+Disable rollback: N
+Save arguments to configuration file: Y
+SAM configuration file: samconfig.toml
+SAM configuration environment: default
 ```
 
-#### Opción B: Despliegue Directo (Después de la primera vez)
+#### Opción B: Despliegue Directo (Siguientes veces)
 
 ```bash
 sam deploy
 ```
 
+**Tiempo aproximado:** 3-5 minutos
+
 ### Paso 5: Verificar el Despliegue
 
 ```bash
-aws cloudformation describe-stacks --stack-name guatepass-slice1 --query 'Stacks[0].StackStatus'
+aws cloudformation describe-stacks \
+  --stack-name guatepass-dev \
+  --query 'Stacks[0].StackStatus'
 ```
 
 **Salida esperada:**
 ```
-"CREATE_COMPLETE"
+"CREATE_COMPLETE" o "UPDATE_COMPLETE"
 ```
 
 ### Paso 6: Obtener Outputs del Stack
 
 ```bash
-aws cloudformation describe-stacks --stack-name guatepass-slice1 --query 'Stacks[0].Outputs'
+aws cloudformation describe-stacks \
+  --stack-name guatepass-dev \
+  --query 'Stacks[0].Outputs' \
+  --output table
 ```
 
-**Guardar estos valores:**
+**Outputs importantes:**
+- `ApiUrl`: URL base de la API REST
 - `DataBucketName`: Nombre del bucket S3
-- `UsersTableName`: Nombre de la tabla DynamoDB
-- `ImportUsersFunctionArn`: ARN de la función Lambda
 - `DashboardURL`: URL del dashboard de CloudWatch
+- Varios endpoints documentados
 
 ---
 
-## 💻 Uso del Sistema
+## 📤 Carga Inicial de Datos (CSV)
 
-### 1. Cargar Datos Iniciales
+### Formato del Archivo CSV
 
-El archivo CSV de clientes está en `data/clientes.csv`. Para cargarlo al sistema:
+El archivo debe tener el siguiente formato:
 
-#### Obtener el nombre del bucket
-
-```bash
-BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name guatepass-slice1 --query 'Stacks[0].Outputs[?OutputKey==`DataBucketName`].OutputValue' --output text)
-echo $BUCKET_NAME
+```csv
+placa,nombre,email,telefono,tipo_usuario,tiene_tag,tag_id,saldo_disponible
+P-123ABC,Juan Pérez,juan@email.com,50212345678,registrado,false,,100.00
+P-456DEF,María López,maria@email.com,50298765432,registrado,true,TAG-001,250.00
+P-888NOREGISTRADO,Usuario Desconocido,,,no_registrado,false,,0.00
 ```
 
-#### Subir el archivo CSV
+**Campos:**
+- `placa`: Placa del vehículo (formato: P-XXXXXX)
+- `nombre`: Nombre del propietario
+- `email`: Correo electrónico (opcional)
+- `telefono`: Teléfono con código de país
+- `tipo_usuario`: "registrado" o "no_registrado"
+- `tiene_tag`: true/false
+- `tag_id`: ID del tag RFID (si tiene_tag=true)
+- `saldo_disponible`: Saldo en quetzales
+
+### Subir el Archivo CSV
+
+#### 1. Obtener el nombre del bucket
+
+```bash
+BUCKET_NAME=$(aws cloudformation describe-stacks \
+  --stack-name guatepass-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`DataBucketName`].OutputValue' \
+  --output text)
+
+echo "Bucket: $BUCKET_NAME"
+```
+
+#### 2. Subir el archivo
 
 ```bash
 aws s3 cp data/clientes.csv s3://$BUCKET_NAME/clientes.csv
@@ -263,152 +397,495 @@ aws s3 cp data/clientes.csv s3://$BUCKET_NAME/clientes.csv
 upload: data/clientes.csv to s3://guatepass-data-dev-123456789012/clientes.csv
 ```
 
-### 2. Verificar la Ejecución de la Lambda
-
-#### Ver logs en tiempo real
+#### 3. Verificar la importación
 
 ```bash
-sam logs -n ImportUsersFunction --stack-name guatepass-slice1 --tail
+# Ver logs en tiempo real
+sam logs -n ImportUsersFunction --stack-name guatepass-dev --tail
+
+# Buscar mensaje de éxito
+# [SUCCESS] Importación completada: {'total': 10, 'success': 10, 'errors': 0}
 ```
 
-**Buscar en los logs:**
-```
-[INFO] Iniciando importación de usuarios
-[INFO] Total de usuarios en CSV: 10
-[SUCCESS] Importación completada: {'total': 10, 'success': 10, 'errors': 0}
-```
-
-#### Ver logs recientes (últimos 10 minutos)
+#### 4. Verificar datos en DynamoDB
 
 ```bash
-aws logs tail /aws/lambda/guatepass-import-users-dev --since 10m
-```
-
-### 3. Verificar los Datos en DynamoDB
-
-#### Opción A: AWS CLI
-
-```bash
-# Obtener nombre de la tabla
-TABLE_NAME=$(aws cloudformation describe-stacks --stack-name guatepass-slice1 --query 'Stacks[0].Outputs[?OutputKey==`UsersTableName`].OutputValue' --output text)
-
-# Escanear la tabla (primeros 10 items)
-aws dynamodb scan --table-name $TABLE_NAME --max-items 10
-```
-
-#### Opción B: Consultar un usuario específico
-
-```bash
-aws dynamodb get-item \
-  --table-name $TABLE_NAME \
-  --key '{"placa": {"S": "P-123ABC"}}'
-```
-
-**Salida esperada:**
-```json
-{
-  "Item": {
-    "placa": {"S": "P-123ABC"},
-    "nombre": {"S": "Juan Pérez"},
-    "email": {"S": "juan@email.com"},
-    "telefono": {"S": "50212345678"},
-    "tipo_usuario": {"S": "registrado"},
-    "tiene_tag": {"BOOL": false},
-    "saldo_disponible": {"N": "100.00"},
-    "estado": {"S": "activo"}
-  }
-}
-```
-
-#### Opción C: Contar usuarios importados
-
-```bash
+# Contar usuarios importados
 aws dynamodb scan \
-  --table-name $TABLE_NAME \
+  --table-name GuatepassUsers-dev \
   --select "COUNT"
 ```
 
-### 4. Probar con Diferentes Archivos CSV
+### Generar CSV de Prueba
 
-Puedes crear tu propio CSV y subirlo:
+Puedes usar el script generador:
 
 ```bash
-# Crear un nuevo archivo
-cat > data/clientes_test.csv << EOF
-placa,nombre,email,telefono,tipo_usuario,tiene_tag,tag_id,saldo_disponible
-P-999ZZZ,Usuario Test,test@email.com,50299999999,registrado,false,,500.00
-EOF
+python scripts/generate_test_csv.py --users 100
+```
 
-# Subirlo
-aws s3 cp data/clientes_test.csv s3://$BUCKET_NAME/clientes_test.csv
+Esto creará `data/clientes_test.csv` con 100 usuarios de prueba.
+
+---
+
+## 💻 Uso del Sistema
+
+### Obtener la URL del API
+
+```bash
+API_URL=$(aws cloudformation describe-stacks \
+  --stack-name guatepass-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+  --output text)
+
+echo "API URL: $API_URL"
+```
+
+### Endpoints Disponibles
+
+#### 1. Consulta de Usuarios
+
+**GET /users/{placa}** - Consultar información de usuario
+
+```bash
+curl "$API_URL/users/P-123ABC"
+```
+
+**Respuesta (200):**
+```json
+{
+  "user": {
+    "placa": "P-123ABC",
+    "nombre": "Juan Pérez",
+    "email": "juan@email.com",
+    "tipo_usuario": "registrado",
+    "saldo_disponible": 100.00,
+    "tiene_tag": false,
+    "estado": "activo"
+  },
+  "message": "Usuario P-123ABC encontrado exitosamente"
+}
+```
+
+**GET /users/{placa}/tag** - Consultar tag asociado
+
+```bash
+curl "$API_URL/users/P-456DEF/tag"
+```
+
+#### 2. Gestión de Tags
+
+**POST /users/{placa}/tag** - Crear/asociar tag
+
+```bash
+curl -X POST "$API_URL/users/P-123ABC/tag" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tag_id": "TAG-12345",
+    "tag_status": "active"
+  }'
+```
+
+**PUT /users/{placa}/tag** - Actualizar tag
+
+```bash
+curl -X PUT "$API_URL/users/P-123ABC/tag" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tag_status": "inactive"
+  }'
+```
+
+**DELETE /users/{placa}/tag** - Eliminar tag
+
+```bash
+curl -X DELETE "$API_URL/users/P-123ABC/tag"
+```
+
+**GET /tags/{tag_id}** - Buscar usuario por Tag ID
+
+```bash
+curl "$API_URL/tags/TAG-12345"
+```
+
+#### 3. Historial
+
+**GET /history/payments/{placa}** - Historial de pagos/transacciones
+
+```bash
+# Consulta básica
+curl "$API_URL/history/payments/P-123ABC"
+
+# Con límite de resultados
+curl "$API_URL/history/payments/P-123ABC?limit=10"
+
+# Con filtro de fechas
+curl "$API_URL/history/payments/P-123ABC?from_date=2025-11-01T00:00:00&to_date=2025-11-30T23:59:59"
+```
+
+**Respuesta:**
+```json
+{
+  "placa": "P-123ABC",
+  "total_transactions": 5,
+  "total_amount": 75.00,
+  "transactions": [
+    {
+      "transaction_id": "TX-20251109103015-P123ABC",
+      "toll_name": "Carretera Norte",
+      "amount_charged": 15.00,
+      "timestamp": "2025-11-09T10:30:15Z",
+      "status": "completed"
+    }
+  ]
+}
+```
+
+**GET /history/invoices/{placa}** - Historial de facturas
+
+```bash
+# Consulta básica
+curl "$API_URL/history/invoices/P-123ABC"
+
+# Solo facturas pendientes
+curl "$API_URL/history/invoices/P-123ABC?status=pendiente"
+
+# Solo facturas pagadas
+curl "$API_URL/history/invoices/P-123ABC?status=pagada"
+```
+
+**Respuesta:**
+```json
+{
+  "placa": "P-123ABC",
+  "summary": {
+    "total_invoices": 8,
+    "pending_invoices": 2,
+    "paid_invoices": 6,
+    "total_amount": 150.00,
+    "total_pending": 45.00,
+    "total_paid": 105.00
+  },
+  "invoices": [
+    {
+      "invoice_id": "FAC-20251109103015",
+      "estado": "pagada",
+      "total": 15.00,
+      "modalidad": 2,
+      "concepto": "Paso por peaje - Carretera Norte"
+    }
+  ]
+}
+```
+
+#### 4. Webhook de Peajes
+
+**POST /webhook/toll** - Recibir evento de paso por peaje
+
+```bash
+curl -X POST "$API_URL/webhook/toll" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "placa": "P-123ABC",
+    "toll_id": "PEAJE001",
+    "timestamp": "2025-11-09T10:30:00Z"
+  }'
+```
+
+**Respuesta (202):**
+```json
+{
+  "message": "Evento de peaje recibido y procesando",
+  "event_id": "evt-uuid-here",
+  "placa": "P-123ABC"
+}
 ```
 
 ---
 
-## 📊 Monitoreo
+## 📝 Ejemplos de Requests
+
+### Usando curl (Linux/Mac/Windows Git Bash)
+
+```bash
+# 1. Consultar usuario
+curl "$API_URL/users/P-111JKL"
+
+# 2. Crear tag
+curl -X POST "$API_URL/users/P-111JKL/tag" \
+  -H "Content-Type: application/json" \
+  -d '{"tag_id": "TAG-99999", "tag_status": "active"}'
+
+# 3. Ver historial de pagos
+curl "$API_URL/history/payments/P-111JKL?limit=5"
+
+# 4. Ver facturas pendientes
+curl "$API_URL/history/invoices/P-888NOREGISTRADO?status=pendiente"
+
+# 5. Simular paso por peaje
+curl -X POST "$API_URL/webhook/toll" \
+  -H "Content-Type: application/json" \
+  -d '{"placa": "P-111JKL", "toll_id": "PEAJE001", "timestamp": "2025-11-11T15:00:00Z"}'
+```
+
+### Usando PowerShell (Windows)
+
+```powershell
+# Obtener API URL
+$API_URL = aws cloudformation describe-stacks --stack-name guatepass-dev --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text
+
+# 1. Consultar usuario
+Invoke-RestMethod -Uri "$API_URL/users/P-111JKL" -Method Get
+
+# 2. Crear tag
+$body = @{
+    tag_id = "TAG-99999"
+    tag_status = "active"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "$API_URL/users/P-111JKL/tag" -Method Post -Body $body -ContentType "application/json"
+
+# 3. Ver historial de pagos
+Invoke-RestMethod -Uri "$API_URL/history/payments/P-111JKL?limit=5" -Method Get
+
+# 4. Simular paso por peaje
+$tollEvent = @{
+    placa = "P-111JKL"
+    toll_id = "PEAJE001"
+    timestamp = "2025-11-11T15:00:00Z"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "$API_URL/webhook/toll" -Method Post -Body $tollEvent -ContentType "application/json"
+```
+
+### Usando Postman
+
+1. **Importar Collection:**
+   - Crear nueva collection "GUATEPASS"
+   - Agregar variable `{{API_URL}}` con tu URL base
+
+2. **Requests de ejemplo:**
+
+```
+GET {{API_URL}}/users/P-123ABC
+GET {{API_URL}}/users/P-123ABC/tag
+POST {{API_URL}}/users/P-123ABC/tag
+  Body: {"tag_id": "TAG-12345", "tag_status": "active"}
+GET {{API_URL}}/history/payments/P-123ABC
+GET {{API_URL}}/history/invoices/P-123ABC
+POST {{API_URL}}/webhook/toll
+  Body: {"placa": "P-123ABC", "toll_id": "PEAJE001", "timestamp": "2025-11-11T15:00:00Z"}
+```
+
+---
+
+## 📊 Monitoreo y Logs
 
 ### Dashboard de CloudWatch
 
-Accede al dashboard desde la consola de AWS o usa la URL del Output:
+#### Acceder al Dashboard
 
+**Opción 1: Desde AWS Console**
+1. Ir a **CloudWatch** en AWS Console
+2. Seleccionar **Dashboards** en el menú lateral
+3. Buscar: `GUATEPASS-Complete-dev`
+
+**Opción 2: URL Directa**
 ```bash
-# Obtener URL del dashboard
 aws cloudformation describe-stacks \
-  --stack-name guatepass-slice1 \
+  --stack-name guatepass-dev \
   --query 'Stacks[0].Outputs[?OutputKey==`DashboardURL`].OutputValue' \
   --output text
 ```
 
-El dashboard muestra:
-- **Lambda Metrics**: Invocaciones, errores, duración
-- **DynamoDB Capacity**: Unidades de lectura/escritura consumidas
-- **Recent Errors**: Log query de errores recientes
+#### Widgets del Dashboard
+
+El dashboard incluye **11 widgets** organizados:
+
+1. **Lambda - Invocaciones Totales**
+2. **Lambda - Errores y Throttles**
+3. **Lambda - Duración (Promedio y P99)**
+4. **Lambda - Concurrencia**
+5. **API Gateway - Total Requests**
+6. **API Gateway - Latencia**
+7. **API Gateway - Errores 4XX/5XX**
+8. **DynamoDB - Read Capacity** (4 tablas)
+9. **DynamoDB - Write Capacity** (4 tablas)
+10. **DynamoDB - Throttling Errors** (4 tablas)
+11. **Logs - Errores Recientes** (Todas las funciones)
+
+### Ver Logs en Tiempo Real
+
+#### Logs de funciones específicas
+
+```bash
+# Lambda: Importación de usuarios
+aws logs tail /aws/lambda/guatepass-import-users-dev --follow
+
+# Lambda: Webhook de peajes
+aws logs tail /aws/lambda/guatepass-ingest-toll-dev --follow
+
+# Lambda: Historial de pagos
+aws logs tail /aws/lambda/guatepass-get-payments-by-plate-dev --follow
+
+# Lambda: Historial de facturas
+aws logs tail /aws/lambda/guatepass-get-invoices-by-plate-dev --follow
+
+# Lambda: Notificaciones
+aws logs tail /aws/lambda/guatepass-notify-user-dev --follow
+
+# Step Functions
+aws logs tail /aws/stepfunctions/guatepass-process-toll-dev --follow
+```
+
+#### Filtrar solo errores
+
+```bash
+aws logs tail /aws/lambda/guatepass-ingest-toll-dev \
+  --filter-pattern "ERROR"
+```
+
+### CloudWatch Logs Insights
+
+#### Query de errores en todas las funciones
+
+```sql
+fields @timestamp, @message, @logStream
+| filter @message like /ERROR/ or @message like /Error/
+| sort @timestamp desc
+| limit 50
+```
+
+#### Query de transacciones procesadas
+
+```sql
+fields @timestamp, @message
+| filter @message like /transaction_id/
+| sort @timestamp desc
+| limit 20
+```
 
 ### Métricas Principales
 
-#### Invocaciones de Lambda
+#### Lambda Invocations
 
 ```bash
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Lambda \
   --metric-name Invocations \
-  --dimensions Name=FunctionName,Value=guatepass-import-users-dev \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
-  --period 3600 \
+  --period 300 \
   --statistics Sum
 ```
 
-#### Errores de Lambda
+#### API Gateway Requests
 
 ```bash
 aws cloudwatch get-metric-statistics \
-  --namespace AWS/Lambda \
-  --metric-name Errors \
-  --dimensions Name=FunctionName,Value=guatepass-import-users-dev \
+  --namespace AWS/ApiGateway \
+  --metric-name Count \
+  --dimensions Name=ApiName,Value=guatepass-api \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
-  --period 3600 \
+  --period 300 \
   --statistics Sum
 ```
 
-### Alarmas
-
-Una alarma está configurada para notificar si la Lambda tiene errores:
+#### DynamoDB Operations
 
 ```bash
-# Ver estado de la alarma
-aws cloudwatch describe-alarms \
-  --alarm-names guatepass-import-users-errors-dev
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/DynamoDB \
+  --metric-name ConsumedReadCapacityUnits \
+  --dimensions Name=TableName,Value=GuatepassUsers-dev \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 300 \
+  --statistics Sum
+```
+
+### Log Groups Configurados
+
+El sistema tiene **17 Log Groups** con retención de 7 días:
+
+1. `/aws/lambda/guatepass-import-users-dev`
+2. `/aws/lambda/guatepass-get-user-by-placa-dev`
+3. `/aws/lambda/guatepass-get-tag-by-placa-dev`
+4. `/aws/lambda/guatepass-create-tag-dev`
+5. `/aws/lambda/guatepass-update-tag-dev`
+6. `/aws/lambda/guatepass-delete-tag-dev`
+7. `/aws/lambda/guatepass-get-tag-by-id-dev`
+8. `/aws/lambda/guatepass-ingest-toll-dev`
+9. `/aws/lambda/guatepass-resolve-user-dev`
+10. `/aws/lambda/guatepass-calculate-fare-dev`
+11. `/aws/lambda/guatepass-record-transaction-dev`
+12. `/aws/lambda/guatepass-update-balance-dev`
+13. `/aws/lambda/guatepass-generate-invoice-dev`
+14. `/aws/lambda/guatepass-notify-user-dev`
+15. `/aws/lambda/guatepass-get-payments-by-plate-dev`
+16. `/aws/lambda/guatepass-get-invoices-by-plate-dev`
+17. `/aws/stepfunctions/guatepass-process-toll-dev`
+
+---
+
+## 🧪 Testing
+
+### Scripts Automatizados
+
+El proyecto incluye scripts de testing completos:
+
+```bash
+# Test de API de consulta
+.\scripts\test-api.ps1
+
+# Test de webhook de peajes
+.\scripts\test-webhook.ps1
+
+# Test de Step Functions
+.\scripts\test-stepfunction.ps1
+
+# Test de gestión de tags
+.\scripts\test-tags.ps1
+
+# Test de historial
+.\scripts\test-history.ps1
+
+# Test de notificaciones
+.\scripts\test-slice6-notifications.ps1
+```
+
+### Testing Manual
+
+#### Test Completo del Flujo
+
+```bash
+# 1. Consultar usuario
+curl "$API_URL/users/P-111JKL"
+
+# 2. Simular paso por peaje
+curl -X POST "$API_URL/webhook/toll" \
+  -H "Content-Type: application/json" \
+  -d '{"placa": "P-111JKL", "toll_id": "PEAJE001", "timestamp": "2025-11-11T15:00:00Z"}'
+
+# 3. Esperar 10 segundos (procesamiento)
+sleep 10
+
+# 4. Ver historial de pagos actualizado
+curl "$API_URL/history/payments/P-111JKL"
+
+# 5. Ver facturas generadas
+curl "$API_URL/history/invoices/P-111JKL"
+
+# 6. Ver logs de notificaciones
+aws logs tail /aws/lambda/guatepass-notify-user-dev --since 5m
 ```
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Problema: "Template format error: [/Resources/ImportUsersFunction] ..."
-
-**Causa:** Error de sintaxis en el template YAML.
+### Problema: "Template format error"
 
 **Solución:**
 ```bash
@@ -416,92 +893,59 @@ sam validate -t infrastructure/template.yaml
 # Corrige los errores indicados
 ```
 
-### Problema: "AccessDenied when calling S3 operation"
+### Problema: "No changes to deploy"
 
-**Causa:** La Lambda no tiene permisos para leer el bucket.
-
-**Solución:** Verifica que el template incluye la policy `S3ReadPolicy`.
-
-### Problema: "CSV no se procesa / Lambda no se dispara"
-
-**Diagnóstico:**
+**Solución:**
 ```bash
-# 1. Verificar que el archivo existe
-aws s3 ls s3://$BUCKET_NAME/
-
-# 2. Verificar trigger de Lambda
-aws lambda get-function --function-name guatepass-import-users-dev
-
-# 3. Ver logs de errores
-aws logs tail /aws/lambda/guatepass-import-users-dev --since 30m --filter-pattern ERROR
+# Hacer build primero
+sam build -t infrastructure/template.yaml
+sam deploy
 ```
 
-**Solución:** Asegúrate de que el archivo se llama `clientes*.csv` (el trigger filtra por prefijo `clientes` y sufijo `.csv`).
+### Problema: "API devuelve 404"
 
-### Problema: "DynamoDB Throttling"
+**Causa:** URL incorrecta o endpoint mal escrito.
 
-**Síntoma:** Errores de tipo `ProvisionedThroughputExceededException`.
-
-**Causa:** Tabla en modo PAY_PER_REQUEST no debería tener throttling a menos que excedas 40,000 WCU/s.
-
-**Solución temporal:**
+**Solución:**
 ```bash
-# Ver métricas de throttling
+# Verificar URL correcta
+aws cloudformation describe-stacks --stack-name guatepass-dev --query 'Stacks[0].Outputs'
+```
+
+### Problema: "Usuario no encontrado en DynamoDB"
+
+**Solución:**
+```bash
+# Verificar si hay datos
+aws dynamodb scan --table-name GuatepassUsers-dev --select COUNT
+
+# Si count=0, cargar CSV
+aws s3 cp data/clientes.csv s3://$BUCKET_NAME/clientes.csv
+```
+
+### Problema: "Throttling en DynamoDB"
+
+**Solución:**
+Las tablas están en PAY_PER_REQUEST, no deberían tener throttling. Verificar:
+
+```bash
 aws cloudwatch get-metric-statistics \
   --namespace AWS/DynamoDB \
   --metric-name UserErrors \
-  --dimensions Name=TableName,Value=$TABLE_NAME \
+  --dimensions Name=TableName,Value=GuatepassUsers-dev \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
   --period 300 \
   --statistics Sum
 ```
 
-### Problema: "La importación se completa pero hay errores"
+### Ver Documentación Adicional
 
-**Diagnóstico:**
-```bash
-# Ver logs completos de la última ejecución
-sam logs -n ImportUsersFunction --stack-name guatepass-slice1
-
-# Buscar líneas con [ERROR] o [WARNING]
-```
-
-**Causas comunes:**
-- Formato de CSV incorrecto (comas faltantes, comillas mal cerradas)
-- Valores inválidos en campos numéricos
-- Placas duplicadas
-
----
-
-## 🧹 Limpiar Recursos
-
-Para eliminar todos los recursos creados:
-
-### Paso 1: Vaciar el Bucket S3
-
-```bash
-aws s3 rm s3://$BUCKET_NAME --recursive
-```
-
-### Paso 2: Eliminar el Stack
-
-```bash
-sam delete --stack-name guatepass-slice1
-```
-
-O con confirmación:
-
-```bash
-aws cloudformation delete-stack --stack-name guatepass-slice1
-```
-
-### Paso 3: Verificar Eliminación
-
-```bash
-aws cloudformation describe-stacks --stack-name guatepass-slice1
-# Debería mostrar: "Stack with id guatepass-slice1 does not exist"
-```
+- `COMANDOS_UTILES.md` - Referencia rápida de comandos
+- `DEPLOYMENT_HISTORIAL.md` - Guía de deployment
+- `DASHBOARD_CLOUDWATCH.md` - Documentación del dashboard
+- `docs/HISTORY_API_README.md` - Documentación de endpoints de historial
+- `docs/SLICE5_TAGS_README.md` - Documentación de gestión de tags
 
 ---
 
@@ -510,33 +954,95 @@ aws cloudformation describe-stacks --stack-name guatepass-slice1
 ```
 GUATE_PASS/
 ├── README.md                           # Este archivo
+├── PROJECT_STATUS.md                   # Estado detallado del proyecto
+├── COMANDOS_UTILES.md                  # Comandos de referencia rápida
+├── DASHBOARD_CLOUDWATCH.md             # Documentación del dashboard
+├── DEPLOYMENT_HISTORIAL.md             # Guía de deployment
+├── samconfig.toml                      # Configuración SAM
+│
 ├── infrastructure/
-│   └── template.yaml                   # SAM template (IaC)
-├── src/
-│   └── import_users/
-│       ├── app.py                      # Código de la Lambda
-│       └── requirements.txt            # Dependencias Python
+│   └── template.yaml                   # Template SAM (IaC completo)
+│
+├── src/                                # 17 Funciones Lambda
+│   ├── import_users/
+│   ├── get_user_by_placa/
+│   ├── get_tag_by_placa/
+│   ├── create_tag/
+│   ├── update_tag/
+│   ├── delete_tag/
+│   ├── get_tag/
+│   ├── ingest_toll/
+│   ├── resolve_user/
+│   ├── calculate_toll_fare/
+│   ├── record_transaction/
+│   ├── update_balance/
+│   ├── generate_invoice/
+│   ├── notify_user/
+│   ├── get_payments_by_plate/          # ⭐ Nuevo
+│   ├── get_invoices_by_plate/          # ⭐ Nuevo
+│   └── stepfunctions/
+│       └── process_toll.asl.json       # Definición Step Function
+│
 ├── data/
-│   └── clientes.csv                    # Datos iniciales de clientes
-├── docs/
-│   └── slice1-arquitectura.md          # Documentación de arquitectura
-└── tests/
-    └── (próximamente)
+│   └── clientes.csv                    # Datos iniciales
+│
+├── scripts/                            # Scripts de testing
+│   ├── test-api.ps1
+│   ├── test-webhook.ps1
+│   ├── test-stepfunction.ps1
+│   ├── test-tags.ps1
+│   ├── test-history.ps1               # ⭐ Nuevo
+│   └── test-slice6-notifications.ps1
+│
+└── docs/                               # Documentación técnica
+    ├── slice1-arquitectura.md
+    ├── SLICE2_API_README.md
+    ├── SLICE3_WEBHOOK_README.md
+    ├── SLICE4_STEPFUNCTIONS_README.md
+    ├── SLICE5_TAGS_README.md
+    └── HISTORY_API_README.md           # ⭐ Nuevo
 ```
+
+---
+
+## 💰 Costos Estimados
+
+### Free Tier de AWS
+
+Los servicios utilizados están mayormente en Free Tier:
+
+| Servicio | Free Tier | Costo Estimado/Mes |
+|----------|-----------|-------------------|
+| **Lambda** | 1M invocaciones | $0.00 |
+| **DynamoDB** | 25 GB almacenamiento | $0.00 |
+| **API Gateway** | 1M requests | $0.00 |
+| **S3** | 5 GB almacenamiento | $0.00 |
+| **CloudWatch** | 10 métricas custom | $0.00 |
+| **Step Functions** | 4,000 transiciones | $0.00 |
+
+**Total estimado:** ~$0.00 en Free Tier ✅
+
+### Más allá del Free Tier
+
+- Lambda: $0.20 por 1M invocaciones
+- DynamoDB: $1.25 por millón de escrituras
+- API Gateway: $3.50 por millón de requests
 
 ---
 
 ## 👥 Equipo
 
-- **Integrante 1:** [Nombre]
+- **Integrante 1:** [Tu Nombre]
 - **Integrante 2:** [Nombre]
 - **Integrante 3:** [Nombre]
 
 ---
 
-## 📅 Entrega
+## 📅 Información del Proyecto
 
-- **Fecha límite:** 17 de noviembre de 2025, 11:59 PM
+- **Universidad:** Francisco Marroquín (UFM)
+- **Curso:** Cloud Computing
+- **Fecha de Entrega:** 17 de noviembre de 2025
 - **Presentación:** 17 de noviembre de 2025
 
 ---
@@ -546,27 +1052,38 @@ GUATE_PASS/
 - [AWS SAM Documentation](https://docs.aws.amazon.com/serverless-application-model/)
 - [AWS Lambda Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html)
 - [DynamoDB Best Practices](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices.html)
-- [Serverless Patterns Collection](https://serverlessland.com/patterns)
+- [API Gateway REST API](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-rest-api.html)
+- [Step Functions](https://docs.aws.amazon.com/step-functions/)
+- [CloudWatch Dashboards](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Dashboards.html)
 
 ---
 
-## 📝 Notas Importantes
+## 🎉 Proyecto Completado
 
-1. **Ambiente de desarrollo:** Este slice está configurado para ambiente `dev`. Para producción, despliega con `--parameter-overrides Environment=prod`.
+¡El sistema GUATEPASS está **100% funcional** y listo para producción!
 
-2. **Costos:** Los servicios utilizados están en Free Tier o tienen costos muy bajos:
-   - Lambda: Primeros 1M de invocaciones gratis
-   - DynamoDB: 25 GB gratis en PAY_PER_REQUEST
-   - S3: Primeros 5 GB gratis
-   - CloudWatch: 10 métricas custom gratis
+### Características Implementadas
 
-3. **Retención de logs:** Los logs se retienen por 7 días para reducir costos.
-
-4. **Versionamiento S3:** El bucket tiene versionamiento habilitado para seguridad.
+✅ **6 Slices completos** + Endpoints de Historial + Dashboard  
+✅ **17 Funciones Lambda** funcionando  
+✅ **12 Endpoints REST** operativos  
+✅ **4 Tablas DynamoDB** con GSI  
+✅ **Step Functions** orquestando flujo completo  
+✅ **Dashboard CloudWatch** con 11 widgets  
+✅ **Logs centralizados** de todas las funciones  
+✅ **Sistema de facturación** con 2 modalidades  
+✅ **Notificaciones simuladas** por email  
+✅ **Testing automatizado** completo  
+✅ **Documentación técnica** exhaustiva  
 
 ---
 
-¡Slice #1 completado! 🎉
+**Última actualización:** Noviembre 11, 2025  
+**Versión:** 1.0.0  
+**Estado:** ✅ PRODUCCIÓN  
 
-Continúa con el Slice #2 para agregar la API de consulta de usuarios.
+---
 
+¿Preguntas? Revisa la documentación en `/docs` o los scripts de testing en `/scripts`.
+
+**¡Gracias por usar GUATEPASS!** 🚗💨
