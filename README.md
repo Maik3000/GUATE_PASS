@@ -34,19 +34,19 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 ✅ **Gestión de Usuarios**
 - Importación masiva desde CSV
 - Consulta de información de usuarios
-- Gestión de Tags RFID
-- Dos modalidades: Registrados y No Registrados
+- Gestión de Tags 
+- Tres modalidades: No registrados, Registrado en App y Con dispositivo Tag
 
 ✅ **Procesamiento de Transacciones**
 - Webhook para recibir eventos de peaje
-- Cálculo automático de tarifas con multiplicadores
+- Cálculo automático de tarifas segun modalidad
 - Descuento automático de saldo (usuarios registrados)
-- Generación de facturas con/sin multa
+- Generación de facturas
 
 ✅ **Sistema de Facturación**
 - Facturas simuladas (no SAT)
 - Modalidad 1 (No Registrado): Factura PENDIENTE + Multa 50%
-- Modalidad 2 (Registrado): Factura PAGADA automática
+- Modalidad 2 y 3 (Registrado en App y con Tag): Factura PAGADA automática
 - Historial completo de facturas por vehículo
 
 ✅ **Notificaciones**
@@ -56,16 +56,14 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 - Alertas de saldo bajo
 
 ✅ **API REST Completa**
-- 12 endpoints para gestión completa
+- 9 endpoints para gestión completa
 - Consulta de usuarios, tags, pagos y facturas
-- CRUD completo de Tags RFID
-- Historial de transacciones
+- CRUD completo de Tags
 
 ✅ **Monitoreo Completo**
 - Dashboard de CloudWatch con 11 widgets
 - Logs centralizados de 17 funciones Lambda
 - Métricas de Lambda, API Gateway y DynamoDB
-- Alarmas configuradas
 
 ### Tecnologías Utilizadas
 
@@ -93,7 +91,7 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 | **Fase #8** | Monitoreo completo con CloudWatch |
 
 **Total de Funciones Lambda:** 17  
-**Total de Endpoints API:** 7  
+**Total de Endpoints API:** 9  
 **Total de Tablas DynamoDB:** 4  
 **Total de Widgets Dashboard:** 11  
 
@@ -603,59 +601,6 @@ curl -X POST "$API_URL/webhook/toll" \
 
 ## 📝 Ejemplos de Requests
 
-### Usando curl (Linux/Mac/Windows Git Bash)
-
-```bash
-# 1. Consultar usuario
-curl "$API_URL/users/P-111JKL"
-
-# 2. Crear tag
-curl -X POST "$API_URL/users/P-111JKL/tag" \
-  -H "Content-Type: application/json" \
-  -d '{"tag_id": "TAG-99999", "tag_status": "active"}'
-
-# 3. Ver historial de pagos
-curl "$API_URL/history/payments/P-111JKL?limit=5"
-
-# 4. Ver facturas pendientes
-curl "$API_URL/history/invoices/P-888NOREGISTRADO?status=pendiente"
-
-# 5. Simular paso por peaje
-curl -X POST "$API_URL/webhook/toll" \
-  -H "Content-Type: application/json" \
-  -d '{"placa": "P-111JKL", "toll_id": "PEAJE001", "timestamp": "2025-11-11T15:00:00Z"}'
-```
-
-### Usando PowerShell (Windows)
-
-```powershell
-# Obtener API URL
-$API_URL = aws cloudformation describe-stacks --stack-name guatepass-dev --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text
-
-# 1. Consultar usuario
-Invoke-RestMethod -Uri "$API_URL/users/P-111JKL" -Method Get
-
-# 2. Crear tag
-$body = @{
-    tag_id = "TAG-99999"
-    tag_status = "active"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "$API_URL/users/P-111JKL/tag" -Method Post -Body $body -ContentType "application/json"
-
-# 3. Ver historial de pagos
-Invoke-RestMethod -Uri "$API_URL/history/payments/P-111JKL?limit=5" -Method Get
-
-# 4. Simular paso por peaje
-$tollEvent = @{
-    placa = "P-111JKL"
-    toll_id = "PEAJE001"
-    timestamp = "2025-11-11T15:00:00Z"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "$API_URL/webhook/toll" -Method Post -Body $tollEvent -ContentType "application/json"
-```
-
 ### Usando Postman
 
 1. **Importar Collection:**
@@ -667,6 +612,8 @@ Invoke-RestMethod -Uri "$API_URL/webhook/toll" -Method Post -Body $tollEvent -Co
 ```
 GET {{API_URL}}/users/P-123ABC
 GET {{API_URL}}/users/P-123ABC/tag
+PUT {{API_URL}}/users/P-123ABC/tag
+DELETE {{API_URL}}/users/P-123ABC/tag
 POST {{API_URL}}/users/P-123ABC/tag
   Body: {"tag_id": "TAG-12345", "tag_status": "active"}
 GET {{API_URL}}/history/payments/P-123ABC
@@ -687,14 +634,6 @@ POST {{API_URL}}/webhook/toll
 1. Ir a **CloudWatch** en AWS Console
 2. Seleccionar **Dashboards** en el menú lateral
 3. Buscar: `GUATEPASS-Complete-dev`
-
-**Opción 2: URL Directa**
-```bash
-aws cloudformation describe-stacks \
-  --stack-name guatepass-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`DashboardURL`].OutputValue' \
-  --output text
-```
 
 #### Widgets del Dashboard
 
@@ -881,167 +820,12 @@ aws logs tail /aws/lambda/guatepass-notify-user-dev --since 5m
 
 ---
 
-## 🔧 Troubleshooting
-
-### Problema: "Template format error"
-
-**Solución:**
-```bash
-sam validate -t infrastructure/template.yaml
-# Corrige los errores indicados
-```
-
-### Problema: "No changes to deploy"
-
-**Solución:**
-```bash
-# Hacer build primero
-sam build -t infrastructure/template.yaml
-sam deploy
-```
-
-### Problema: "API devuelve 404"
-
-**Causa:** URL incorrecta o endpoint mal escrito.
-
-**Solución:**
-```bash
-# Verificar URL correcta
-aws cloudformation describe-stacks --stack-name guatepass-dev --query 'Stacks[0].Outputs'
-```
-
-### Problema: "Usuario no encontrado en DynamoDB"
-
-**Solución:**
-```bash
-# Verificar si hay datos
-aws dynamodb scan --table-name GuatepassUsers-dev --select COUNT
-
-# Si count=0, cargar CSV
-aws s3 cp data/clientes.csv s3://$BUCKET_NAME/clientes.csv
-```
-
-### Problema: "Throttling en DynamoDB"
-
-**Solución:**
-Las tablas están en PAY_PER_REQUEST, no deberían tener throttling. Verificar:
-
-```bash
-aws cloudwatch get-metric-statistics \
-  --namespace AWS/DynamoDB \
-  --metric-name UserErrors \
-  --dimensions Name=TableName,Value=GuatepassUsers-dev \
-  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
-  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
-  --period 300 \
-  --statistics Sum
-```
-
-### Ver Documentación Adicional
-
-- `COMANDOS_UTILES.md` - Referencia rápida de comandos
-- `DEPLOYMENT_HISTORIAL.md` - Guía de deployment
-- `DASHBOARD_CLOUDWATCH.md` - Documentación del dashboard
-- `docs/HISTORY_API_README.md` - Documentación de endpoints de historial
-- `docs/SLICE5_TAGS_README.md` - Documentación de gestión de tags
-
----
-
-## 📚 Estructura del Proyecto
-
-```
-GUATE_PASS/
-├── README.md                           # Este archivo
-├── PROJECT_STATUS.md                   # Estado detallado del proyecto
-├── COMANDOS_UTILES.md                  # Comandos de referencia rápida
-├── DASHBOARD_CLOUDWATCH.md             # Documentación del dashboard
-├── DEPLOYMENT_HISTORIAL.md             # Guía de deployment
-├── samconfig.toml                      # Configuración SAM
-│
-├── infrastructure/
-│   └── template.yaml                   # Template SAM (IaC completo)
-│
-├── src/                                # 17 Funciones Lambda
-│   ├── import_users/
-│   ├── get_user_by_placa/
-│   ├── get_tag_by_placa/
-│   ├── create_tag/
-│   ├── update_tag/
-│   ├── delete_tag/
-│   ├── get_tag/
-│   ├── ingest_toll/
-│   ├── resolve_user/
-│   ├── calculate_toll_fare/
-│   ├── record_transaction/
-│   ├── update_balance/
-│   ├── generate_invoice/
-│   ├── notify_user/
-│   ├── get_payments_by_plate/          # ⭐ Nuevo
-│   ├── get_invoices_by_plate/          # ⭐ Nuevo
-│   └── stepfunctions/
-│       └── process_toll.asl.json       # Definición Step Function
-│
-├── data/
-│   └── clientes.csv                    # Datos iniciales
-│
-├── scripts/                            # Scripts de testing
-│   ├── test-api.ps1
-│   ├── test-webhook.ps1
-│   ├── test-stepfunction.ps1
-│   ├── test-tags.ps1
-│   ├── test-history.ps1               # ⭐ Nuevo
-│   └── test-slice6-notifications.ps1
-│
-└── docs/                               # Documentación técnica
-    ├── slice1-arquitectura.md
-    ├── SLICE2_API_README.md
-    ├── SLICE3_WEBHOOK_README.md
-    ├── SLICE4_STEPFUNCTIONS_README.md
-    ├── SLICE5_TAGS_README.md
-    └── HISTORY_API_README.md           # ⭐ Nuevo
-```
-
----
-
-## 💰 Costos Estimados
-
-### Free Tier de AWS
-
-Los servicios utilizados están mayormente en Free Tier:
-
-| Servicio | Free Tier | Costo Estimado/Mes |
-|----------|-----------|-------------------|
-| **Lambda** | 1M invocaciones | $0.00 |
-| **DynamoDB** | 25 GB almacenamiento | $0.00 |
-| **API Gateway** | 1M requests | $0.00 |
-| **S3** | 5 GB almacenamiento | $0.00 |
-| **CloudWatch** | 10 métricas custom | $0.00 |
-| **Step Functions** | 4,000 transiciones | $0.00 |
-
-**Total estimado:** ~$0.00 en Free Tier ✅
-
-### Más allá del Free Tier
-
-- Lambda: $0.20 por 1M invocaciones
-- DynamoDB: $1.25 por millón de escrituras
-- API Gateway: $3.50 por millón de requests
-
----
-
-## 👥 Equipo
-
-- **Integrante 1:** [Tu Nombre]
-- **Integrante 2:** [Nombre]
-- **Integrante 3:** [Nombre]
-
----
 
 ## 📅 Información del Proyecto
 
 - **Universidad:** Francisco Marroquín (UFM)
 - **Curso:** Cloud Computing
 - **Fecha de Entrega:** 17 de noviembre de 2025
-- **Presentación:** 17 de noviembre de 2025
 
 ---
 
@@ -1056,32 +840,3 @@ Los servicios utilizados están mayormente en Free Tier:
 
 ---
 
-## 🎉 Proyecto Completado
-
-¡El sistema GUATEPASS está **100% funcional** y listo para producción!
-
-### Características Implementadas
-
-✅ **6 Slices completos** + Endpoints de Historial + Dashboard  
-✅ **17 Funciones Lambda** funcionando  
-✅ **12 Endpoints REST** operativos  
-✅ **4 Tablas DynamoDB** con GSI  
-✅ **Step Functions** orquestando flujo completo  
-✅ **Dashboard CloudWatch** con 11 widgets  
-✅ **Logs centralizados** de todas las funciones  
-✅ **Sistema de facturación** con 2 modalidades  
-✅ **Notificaciones simuladas** por email  
-✅ **Testing automatizado** completo  
-✅ **Documentación técnica** exhaustiva  
-
----
-
-**Última actualización:** Noviembre 11, 2025  
-**Versión:** 1.0.0  
-**Estado:** ✅ PRODUCCIÓN  
-
----
-
-¿Preguntas? Revisa la documentación en `/docs` o los scripts de testing en `/scripts`.
-
-**¡Gracias por usar GUATEPASS!** 🚗💨
