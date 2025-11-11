@@ -79,23 +79,21 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 
 ---
 
-## 🎯 Estado del Proyecto
+## 🎯 Resumen del Proyecto
 
-### ✅ **PROYECTO 100% COMPLETADO**
-
-| Componente | Estado | Descripción |
-|-----------|--------|-------------|
-| **Slice #1** | ✅ | Carga inicial de datos desde CSV |
-| **Slice #2** | ✅ | API de consulta de usuarios y tags |
-| **Slice #3** | ✅ | Webhook de peajes y EventBridge |
-| **Slice #4** | ✅ | Step Functions para procesamiento |
-| **Slice #5** | ✅ | Gestión completa de Tags RFID |
-| **Slice #6** | ✅ | Notificaciones y facturación |
-| **Historial** | ✅ | Endpoints de historial de pagos/facturas |
-| **Dashboard** | ✅ | Monitoreo completo con CloudWatch |
+| Componente | Descripción |
+|-----------|-------------|
+| **Fase #1** | Carga inicial de datos desde CSV |
+| **Fase #2** | API de consulta de usuarios y tags |
+| **Fase #3** | Webhook de peajes y EventBridge |
+| **Fase #4** | Step Functions para procesamiento |
+| **Fase #5** | Gestión completa de Tags RFID |
+| **Fase #6** | Notificaciones y facturación |
+| **Fase #7** | Endpoints de historial de pagos/facturas |
+| **Fase #8** | Monitoreo completo con CloudWatch |
 
 **Total de Funciones Lambda:** 17  
-**Total de Endpoints API:** 12  
+**Total de Endpoints API:** 7  
 **Total de Tablas DynamoDB:** 4  
 **Total de Widgets Dashboard:** 11  
 
