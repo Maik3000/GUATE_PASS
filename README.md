@@ -53,7 +53,7 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 - Alertas de saldo bajo
 
 ✅ **API REST Completa**
-- 9 endpoints para gestión completa
+- 7 endpoints para gestión completa
 - Consulta de usuarios, tags, pagos y facturas
 - CRUD completo de Tags
 
@@ -88,7 +88,7 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 | **Fase #8** | Monitoreo completo con CloudWatch |
 
 **Total de Funciones Lambda:** 17  
-**Total de Endpoints API:** 9  
+**Total de Endpoints API:** 7
 **Total de Tablas DynamoDB:** 4  
 **Total de Widgets Dashboard:** 11  
 
@@ -111,12 +111,10 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 ┌──────────────────────────────────────────────────────────────┐
 │                     API Gateway REST                          │
 ├──────────────────────────────────────────────────────────────┤
-│  GET  /users/{placa}              - Consultar usuario        │
 │  GET  /users/{placa}/tag          - Consultar tag            │
 │  POST /users/{placa}/tag          - Crear tag                │
 │  PUT  /users/{placa}/tag          - Actualizar tag           │
 │  DELETE /users/{placa}/tag        - Eliminar tag             │
-│  GET  /tags/{tag_id}              - Buscar por Tag ID        │
 │  GET  /history/payments/{placa}   - Historial pagos         │
 │  GET  /history/invoices/{placa}   - Historial facturas      │
 │  POST /webhook/toll               - Recibir evento peaje     │
@@ -495,11 +493,6 @@ curl -X PUT "$API_URL/users/P-123ABC/tag" \
 curl -X DELETE "$API_URL/users/P-123ABC/tag"
 ```
 
-**GET /tags/{tag_id}** - Buscar usuario por Tag ID
-
-```bash
-curl "$API_URL/tags/TAG-12345"
-```
 
 #### 3. Historial
 
