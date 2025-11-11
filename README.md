@@ -11,7 +11,6 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 ## 📋 Tabla de Contenidos
 
 - [Descripción General](#-descripción-general)
-- [Estado del Proyecto](#-estado-del-proyecto)
 - [Arquitectura](#-arquitectura)
 - [Prerrequisitos](#-prerrequisitos)
 - [Instalación y Despliegue](#-instalación-y-despliegue)
@@ -20,8 +19,6 @@ Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemal
 - [Ejemplos de Requests](#-ejemplos-de-requests)
 - [Monitoreo y Logs](#-monitoreo-y-logs)
 - [Testing](#-testing)
-- [Troubleshooting](#-troubleshooting)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
 
 ---
 
