@@ -453,30 +453,6 @@ git push origin main
 
 ---
 
-## 🚨 Troubleshooting
-
-### Limpiar Build Cache
-
-```bash
-rm -rf .aws-sam/
-sam build --cached
-```
-
-### Validar Credenciales
-
-```bash
-aws sts get-caller-identity
-aws configure list
-```
-
-### Ver Logs de Error Detallados
-
-```bash
-sam logs -n ImportUsersFunction --stack-name guatepass-slice1 \
-  --start-time '30m ago' \
-  --filter-pattern "ERROR" \
-  --tail
-```
 
 ### Verificar Permisos IAM
 
@@ -486,45 +462,6 @@ aws iam get-user
 aws iam list-attached-user-policies --user-name TU_USUARIO
 ```
 
----
-
-## 💡 Tips Avanzados
-
-### Formatear Output como Tabla
-
-```bash
-aws dynamodb scan --table-name $TABLE_NAME --output table
-```
-
-### Usar JQ para Parsear JSON
-
-```bash
-# Instalar jq primero: sudo apt install jq (Linux) o brew install jq (Mac)
-
-# Extraer solo las placas
-aws dynamodb scan --table-name $TABLE_NAME | jq -r '.Items[].placa.S'
-
-# Contar usuarios registrados
-aws dynamodb scan --table-name $TABLE_NAME | \
-  jq '[.Items[] | select(.tipo_usuario.S == "registrado")] | length'
-```
-
-### Alias Útiles
-
-```bash
-# Agregar a ~/.bashrc o ~/.zshrc
-
-alias sam-build='sam build -t infrastructure/template.yaml'
-alias sam-deploy='sam deploy'
-alias sam-logs='sam logs -n ImportUsersFunction --stack-name guatepass-slice1 --tail'
-alias sam-delete='sam delete --stack-name guatepass-slice1'
-
-alias dynamo-scan='aws dynamodb scan --table-name $TABLE_NAME'
-alias dynamo-count='aws dynamodb scan --table-name $TABLE_NAME --select COUNT'
-
-alias s3-upload='aws s3 cp data/clientes.csv s3://$BUCKET_NAME/clientes.csv'
-alias s3-ls='aws s3 ls s3://$BUCKET_NAME/'
-```
 
 ---
 
@@ -536,5 +473,4 @@ alias s3-ls='aws s3 ls s3://$BUCKET_NAME/'
 
 ---
 
-**Tip:** Guarda este archivo en tus marcadores para acceso rápido durante el desarrollo.
 
