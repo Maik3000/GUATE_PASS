@@ -87,12 +87,11 @@ def lambda_handler(event, context):
         # para mantener el historial en tag_deleted_at
         users_table.update_item(
             Key={'placa': placa},
-            UpdateExpression='SET tiene_tag = :has_tag, tag_id = :empty, tag_status = :empty_str, tag_deleted_at = :deleted',
+            UpdateExpression='SET tiene_tag = :has_tag, tag_deleted_at = :deleted REMOVE tag_id, tag_status',
             ExpressionAttributeValues={
                 ':has_tag': False,
-                ':empty': '',  # String vacío para mantener el tipo
-                ':empty_str': '',
                 ':deleted': timestamp
+                # Ya no necesitamos :empty ni :empty_str
             }
         )
         

@@ -780,49 +780,203 @@ Resources:
   GuatepassDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: !Sub GUATEPASS-Slice1-${Environment}
+      DashboardName: !Sub GUATEPASS-Complete-${Environment}
       DashboardBody: !Sub |
         {
           "widgets": [
             {
               "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
               "properties": {
                 "metrics": [
-                  ["AWS/Lambda", "Invocations", {"stat": "Sum", "label": "Invocaciones"}],
-                  [".", "Errors", {"stat": "Sum", "label": "Errores"}],
-                  [".", "Duration", {"stat": "Average", "label": "Duración Promedio"}]
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum"}]
                 ],
-                "period": 300,
-                "stat": "Average",
+                "view": "timeSeries",
+                "stacked": false,
                 "region": "${AWS::Region}",
-                "title": "Lambda ImportUsers - Métricas",
-                "dimensions": {
-                  "FunctionName": ["${ImportUsersFunction}"]
-                }
+                "title": "Lambda - Invocaciones Totales",
+                "period": 300
               }
             },
             {
               "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
               "properties": {
                 "metrics": [
-                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", {"stat": "Sum"}],
-                  [".", "ConsumedWriteCapacityUnits", {"stat": "Sum"}]
+                  ["AWS/Lambda", "Errors", {"stat": "Sum"}],
+                  [".", "Throttles", {"stat": "Sum"}]
                 ],
-                "period": 300,
-                "stat": "Average",
+                "view": "timeSeries",
+                "stacked": false,
                 "region": "${AWS::Region}",
-                "title": "DynamoDB GuatepassUsers - Capacidad",
-                "dimensions": {
-                  "TableName": ["${GuatepassUsersTable}"]
-                }
+                "title": "Lambda - Errores y Throttles",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Duration", {"stat": "Average"}],
+                  ["...", {"stat": "p99"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "Lambda - Duración (ms)",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "ConcurrentExecutions", {"stat": "Maximum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "Lambda - Concurrencia",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/ApiGateway", "Count", "ApiName", "guatepass-api", {"stat": "Sum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "API Gateway - Total Requests",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/ApiGateway", "Latency", "ApiName", "guatepass-api", {"stat": "Average"}],
+                  ["...", {"stat": "p99"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "API Gateway - Latencia (ms)",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/ApiGateway", "4XXError", "ApiName", "guatepass-api", {"stat": "Sum"}],
+                  [".", "5XXError", ".", ".", {"stat": "Sum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "API Gateway - Errores 4XX/5XX",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${GuatepassUsersTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTransactionsTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassInvoicesTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTollsTable}", {"stat": "Sum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "DynamoDB - Read Capacity",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "${GuatepassUsersTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTransactionsTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassInvoicesTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTollsTable}", {"stat": "Sum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "DynamoDB - Write Capacity",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "UserErrors", "TableName", "${GuatepassUsersTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTransactionsTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassInvoicesTable}", {"stat": "Sum"}],
+                  ["...", "${GuatepassTollsTable}", {"stat": "Sum"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "DynamoDB - Throttling Errors",
+                "period": 300
               }
             },
             {
               "type": "log",
+              "x": 0,
+              "y": 30,
+              "width": 24,
+              "height": 6,
               "properties": {
-                "query": "SOURCE '${ImportUsersLogGroup}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 20",
+                "query": "fields @timestamp, @message\n| filter @message like /ERROR/ or @message like /Error/\n| sort @timestamp desc\n| limit 50",
                 "region": "${AWS::Region}",
-                "title": "Errores Recientes",
+                "title": "Logs - Errores Recientes",
                 "stacked": false
               }
             }
@@ -870,7 +1024,7 @@ Outputs:
 
   DashboardURL:
     Description: URL del Dashboard de CloudWatch
-    Value: !Sub https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=GUATEPASS-Slice1-${Environment}
+    Value: !Sub https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=GUATEPASS-Complete-${Environment}
   
   ImportUsersFunctionName:
     Description: Nombre de la función Lambda para configurar trigger S3
