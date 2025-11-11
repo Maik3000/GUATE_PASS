@@ -1,6 +1,6 @@
 # 🚗 GUATEPASS - Sistema de Cobro Automatizado de Peajes
 
-Sistema serverless **100% completado** para el cobro automatizado de peajes en la Ciudad de Guatemala, construido completamente con servicios administrados de AWS.
+Sistema serverless para el cobro automatizado de peajes en la Ciudad de Guatemala, construido completamente con servicios administrados de AWS.
 
 [![AWS](https://img.shields.io/badge/AWS-Serverless-orange)](https://aws.amazon.com/)
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
