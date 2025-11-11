@@ -1,8 +1,8 @@
 # 📊 GUATEPASS - Estado del Proyecto
 
-**Fecha:** Noviembre 9, 2025  
-**Slice Actual:** #6 - Notificaciones y Facturación  
-**Estado:** ✅ PROYECTO 100% COMPLETADO - TODOS LOS SLICES FUNCIONALES
+**Fecha:** Noviembre 11, 2025  
+**Slice Actual:** #6 - Notificaciones y Facturación + Endpoints de Historial  
+**Estado:** ✅ PROYECTO 100% COMPLETADO - TODOS LOS SLICES FUNCIONALES + ENDPOINTS DE HISTORIAL
 
 ---
 
@@ -210,6 +210,18 @@ sam deploy --guided
 - [x] Diferenciación por modalidad
 - [x] Script de testing
 - [x] Documentación completa
+
+### Endpoints de Historial ✅ COMPLETADO
+
+- [x] GET /history/payments/{placa} - Historial de pagos/transacciones
+- [x] GET /history/invoices/{placa} - Historial de facturas
+- [x] Lambda: GetPaymentsByPlateFunction
+- [x] Lambda: GetInvoicesByPlateFunction
+- [x] Filtros opcionales (limit, from_date, to_date, status)
+- [x] Consultas con GSI para performance O(1)
+- [x] Estadísticas agregadas en respuestas
+- [x] Script de testing automatizado
+- [x] Documentación técnica completa
 
 ---
 

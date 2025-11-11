@@ -293,6 +293,59 @@ Resources:
         Environment: !Ref Environment
 
   # ========================================
+  # HISTORY ENDPOINTS - Pagos y Facturas
+  # ========================================
+  GetPaymentsByPlateFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassTransactionsTable
+    Properties:
+      FunctionName: !Sub guatepass-get-payments-by-plate-${Environment}
+      CodeUri: ../src/get_payments_by_plate/
+      Handler: app.lambda_handler
+      Description: Consulta historial de pagos (transacciones) por placa
+      Environment:
+        Variables:
+          TRANSACTIONS_TABLE_NAME: !Ref GuatepassTransactionsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GuatepassTransactionsTable
+      Events:
+        GetPaymentsHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /history/payments/{placa}
+            Method: GET
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  GetInvoicesByPlateFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GuatepassInvoicesTable
+    Properties:
+      FunctionName: !Sub guatepass-get-invoices-by-plate-${Environment}
+      CodeUri: ../src/get_invoices_by_plate/
+      Handler: app.lambda_handler
+      Description: Consulta historial de facturas por placa
+      Environment:
+        Variables:
+          INVOICES_TABLE_NAME: !Ref GuatepassInvoicesTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GuatepassInvoicesTable
+      Events:
+        GetInvoicesHistory:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GuatepassApi
+            Path: /history/invoices/{placa}
+            Method: GET
+      Tags:
+        Project: GUATEPASS
+        Environment: !Ref Environment
+
+  # ========================================
   # SLICE #5 - GESTIÓN DE TAGS
   # ========================================
   
@@ -596,6 +649,18 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${GetTagByPlacaFunction}
+      RetentionInDays: 7
+
+  GetPaymentsByPlateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetPaymentsByPlateFunction}
+      RetentionInDays: 7
+
+  GetInvoicesByPlateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetInvoicesByPlateFunction}
       RetentionInDays: 7
 
   IngestTollLogGroup:
@@ -917,3 +982,14 @@ Outputs:
     Value: !GetAtt NotifyUserFunction.Arn
     Export:
       Name: !Sub ${AWS::StackName}-NotifyUserFunction
+
+  # ========================================
+  # OUTPUTS - Endpoints de Historial
+  # ========================================
+  GetPaymentsHistoryEndpoint:
+    Description: Endpoint para consultar historial de pagos por placa
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/history/payments/{placa} [GET]
+
+  GetInvoicesHistoryEndpoint:
+    Description: Endpoint para consultar historial de facturas por placa
+    Value: !Sub https://${GuatepassApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/history/invoices/{placa} [GET]
