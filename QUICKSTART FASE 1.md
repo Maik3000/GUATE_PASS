@@ -1,4 +1,4 @@
-# 🚀 Quick Start - GUATEPASS Slice #1
+# 🚀 Quick Start - GUATEPASS Fase 1
 
 Guía rápida para desplegar y probar el sistema en menos de 10 minutos.
 
@@ -110,17 +110,6 @@ sam logs -n ImportUsersFunction --stack-name guatepass-slice1 --tail
 
 ---
 
-## 🎓 Para Presentación
-
-### Demo en vivo
-
-1. **Mostrar arquitectura:** `docs/slice1-arquitectura.md`
-2. **Mostrar IaC:** `infrastructure/template.yaml`
-3. **Subir CSV:** Ejecutar comando de carga
-4. **Mostrar logs:** En tiempo real con `sam logs --tail`
-5. **Mostrar dashboard:** Abrir URL de CloudWatch
-6. **Consultar datos:** Mostrar scan de DynamoDB
-
 ### Métricas clave a mostrar
 
 - ✅ Lambda: Invocations, Errors (debe ser 0), Duration
@@ -138,39 +127,3 @@ aws s3 rm s3://$BUCKET --recursive
 # Eliminar stack
 sam delete --stack-name guatepass-slice1
 ```
-
----
-
-## ❓ Troubleshooting Común
-
-### "Template format error"
-```bash
-sam validate -t infrastructure/template.yaml
-```
-
-### "AccessDenied" al subir CSV
-Verificar credenciales:
-```bash
-aws sts get-caller-identity
-```
-
-### Lambda no se dispara
-Verificar que el archivo se llama `clientes*.csv`:
-```bash
-aws s3 ls s3://$BUCKET/
-```
-
----
-
-## 📚 Documentación Completa
-
-Para más detalles, ver:
-- **README.md** - Guía completa
-- **docs/slice1-arquitectura.md** - Decisiones arquitectónicas
-
----
-
-**Tiempo estimado:** ⏱️ 8-10 minutos
-
-**Costo:** 💰 Free Tier (primeras ejecuciones gratis)
-
