@@ -290,8 +290,18 @@ def lambda_handler(event, context):
             # Sin email ni teléfono
             else:
                 notification_result['message'] = 'Usuario sin email ni teléfono registrado'
-                print(f"⚠️ Usuario {user_data.get('placa')} no tiene email ni teléfono")
-        
+                placa = user_data.get('placa', 'DESCONOCIDA')
+                sms_template = f"""
+                    
+                    ℹ️ Querido Usuario:
+                    
+                    GUATEPASS: Detectamos un paso por peaje del vehiculo {placa}.
+                    Se ha generado una factura pendiente con multa.
+                    
+                    ¡Registrate gratis en la app GuatePass para evitar multas futuras y activar cobros automaticos!
+                    
+                    """
+                print(sms_template)        
         # Modalidad 2: Notificación de cobro (solo email)
         elif modalidad == 2:
             if email and email != 'N/A':
